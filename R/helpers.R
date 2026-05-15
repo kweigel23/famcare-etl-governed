@@ -184,10 +184,7 @@ parse_date_safe <- function(
       x
     )
   )
-  ifelse(
-    !is.na(
-      y
-    ),
+  dplyr::coalesce(
     y,
     m
   )
@@ -550,14 +547,11 @@ make_path <- function(
 read_famcare_csv <- function(
   path,
   metadata,
-  na = c(
-    "",
-    " "
-  ),
+  na = c("", " "),
   ...
 ) {
 
-  # Read header only
+  # 1. Read header only
   nms <- names(
     readr::read_csv(
       path,
@@ -567,19 +561,16 @@ read_famcare_csv <- function(
   ) |>
     tolower()
 
-  # print("DEBUG: metadata inside read_famcare_csv")
-  # print(metadata %>% select(asset_id, view_field_name))
-  #
-  # print("DEBUG: metadata field_name")
-  # print(metadata %>% select(view_field_name, field_name))
-
-  # Generate col_types from metadata slice
+  # 2. Generate governed col_types from metadata slice
   col_types <- generate_col_types(
     colnames = nms,
     metadata = metadata
   )
 
-  # 3. read full dataset with governed col_types
+  # 3. Force all date columns to character
+  col_types <- chartr("D", "c", col_types)
+
+  # 4. Read full dataset with patched col_types
   readr::read_csv(
     path,
     col_types = col_types,
@@ -720,10 +711,39 @@ load_famcare_extract <- function(
     )
   }
 
+  # 1. Ingest CSV (all dates are now character due to col_types override in 
+  #    read_famcare_csv)
   df <- read_famcare_csv(
     path = path,
     metadata = metadata
   )
+
+  # 2. Identify governed date columns from metadata in analytic_fields.
+  date_cols <- metadata |>
+    dplyr::filter(
+      data_type == "date"
+    ) |>
+    dplyr::pull(
+      field_name
+    ) |>
+    tolower()
+
+  # 3. Apply safe date parsing to all governed date columns.
+  if (
+    length(
+      date_cols
+    ) > 0
+  ) {
+    df <- df |>
+      dplyr::mutate(
+        dplyr::across(
+          tidyselect::all_of(
+            date_cols
+            ),
+          parse_date_safe
+        )
+      )
+  }
 
   # # Apply metadata-driven renaming
   # rename_map <- metadata |>
