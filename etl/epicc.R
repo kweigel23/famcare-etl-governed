@@ -569,7 +569,12 @@ transform_epicc_pathclient <- function(
     "enrollment_starting_date",
     "enrollment_ending_date",
     "dismissal_reason_description",
+    "age_at_enrollment",
+    "agency_code",
     "agency_description",
+    "agency_code_non_cfl",
+    "agency_description_non_cfl",
+    "agency_transformation_flag",
     "enroll_path_join_source",
     "pwy_start_date",
     "pwy_end_date",
@@ -1022,6 +1027,15 @@ transform_epicc_referral_flow <- function(
       housing_one = housing_one
     ),
     parent_map = parent_map,
+    transformed = list(
+      ref = ref,
+      ic = ic,
+      twow = twow,
+      thirtyd = thirtyd,
+      threem = threem,
+      sixm = sixm,
+      reeng = reeng
+    ),
     joined_referral_flow = joined
   )
 
