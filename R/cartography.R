@@ -390,28 +390,29 @@ build_county_shapefiles <- function() {
   )
 }
 
-# ZCTA shapefiles (2024 vintage - update to match latest vintage when 
-# applicable)
+# ZCTA shapefiles (`year = NULL` so that it will download whatever vintage is
+# default). The rename() of `geoid` has been updated so that this function works
+# regardless of whether `cb = TRUE` or `cb = FALSE`.
 build_zcta <- function() {
   tigris::zctas(
-    cb = TRUE,
+    cb = FALSE,
     starts_with = c(
       "63",
       "64",
       "65"
     ),
-    year = 2024
+    year = NULL
   ) |>
     dplyr::rename(
       zcta = dplyr::starts_with(
         "ZCTA"
       ),
-      geoid = dplyr::starts_with(
-        "GEOID"
-      ),
-      geoid_aff = dplyr::starts_with(
-        "AFFGEOID"
-      ),
+      geoid = matches(
+        "^GEOID[0-9]{2}$"
+        ),      # GEOID20
+      geoid_aff = matches(
+        "AFFGEOID|GEOIDFQ"
+        ), # AFFGEOID20 or GEOIDFQ20
       land_area = dplyr::starts_with(
         "ALAND"
       ),

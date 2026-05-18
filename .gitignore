@@ -18,16 +18,16 @@ html_test_files/
 # Common rendered outputs
 *.pdf
 *.docx
+
+# Ignore HTML everywhere except rendered output directory
 *.html
+!_output/html/*.html
 
 # ============================================================
 # 2. ETL intermediate data (cache outputs)
 # ============================================================
 data_intermediate/*
 !data_intermediate/.gitkeep
-# This retains the folder but not the contents.
-# data_intermediate/*
-# !data_intermediate/.gitkeep
 
 # ============================================================
 # 3. R / RStudio artifacts
@@ -55,10 +55,6 @@ _book/
 *_cache/
 /cache/
 
-# Temporary files created by R markdown
-*.utf8.md
-*.knit.md
-
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
@@ -67,17 +63,17 @@ vignettes/*.pdf
 .httr-oauth
 
 # ============================================================
-# 4. Editor artifacts
-# ============================================================
-.vscode/
-
-# ============================================================
-# 5. Python artifacts
+# 4. Python artifacts
 # ============================================================
 __pycache__/
 .ipynb_checkpoints/
 .env/
 .venv/
+
+# ============================================================
+# 5. Editor artifacts
+# ============================================================
+.vscode/
 
 # ============================================================
 # 6. LaTeX auxiliary files
@@ -106,7 +102,9 @@ __pycache__/
 *.synctex*
 *.pdfsync
 
-# Bibliography
+# ============================================================
+# 7. Bibliography auxiliary files
+# ============================================================
 *.bbl
 *.bcf
 *.blg
@@ -115,12 +113,28 @@ __pycache__/
 *.run.xml
 
 # ============================================================
-# 7. Miscellaneous outputs
+# 8. Miscellaneous outputs
 # ============================================================
 *.doc
 *.xlsx
 *.xls
 *.csv
 *.ppt
-*.png
 *.jpg
+*.tex
+
+# ============================================================
+# 9. PNG handling
+# ============================================================
+*.png
+!images/*.png
+
+# ============================================================
+# 10. Quarto freeze artifacts
+# ============================================================
+_freeze/
+
+# ============================================================
+# 11. Posit AI files
+# ============================================================
+.positai
