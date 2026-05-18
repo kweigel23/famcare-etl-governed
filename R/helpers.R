@@ -796,7 +796,7 @@ build_subsets <- function(
     fiscal_system
   )
 
-  full_data |>
+  df <- full_data |>
     dplyr::mutate(
       in_period =
         enrollment_starting_date >= start_date &
@@ -808,14 +808,15 @@ build_subsets <- function(
         ) &
         enrollment_ending_date >= start_date &
         enrollment_ending_date <= end_date
-    ) |>
+    )
+  
     list(
       initiated_within_period = dplyr::filter(
-        .,
+        df,
         in_period
       ),
       dismissed_within_period = dplyr::filter(
-        .,
+        df,
         dismissed_in_period
       )
     )
