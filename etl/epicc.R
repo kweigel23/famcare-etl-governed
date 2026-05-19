@@ -860,6 +860,38 @@ transform_epicc_referral_flow <- function(
       )
     )
 
+  reeng_wide <- reeng |>
+    mutate(
+      reengage_period = case_when(
+        reengage_follow_up_form_reengagement == "Two Week" ~ "two_week",
+        reengage_follow_up_form_reengagement == "Thirty Day" ~ "thirty_day",
+        .default = NA_character_
+      )
+    ) |> 
+    group_by(
+      reengage_period,
+      tiedenrollment,
+      client_number
+    ) |> 
+    arrange(
+      desc(
+        reengage_pathway_date
+      )
+    ) |> 
+    summarize(
+      reengage_status = first(
+        na.omit(
+          reengage_status_reengagement
+        )
+      ),
+      .groups = "drop"
+    ) |> 
+    pivot_wider(
+      names_from = reengage_period,
+      values_from = reengage_status,
+      names_prefix = "reengage_status_"
+    )
+  
   # Start with pivoted pathclient
   pc <- epicc$pathclient
 
@@ -1012,7 +1044,7 @@ transform_epicc_referral_flow <- function(
       )
     ) |>
     dplyr::left_join(
-      reeng,
+      reeng_wide,
       by = join_by(
         "client_number",
         "tiedenrollment"
@@ -1034,7 +1066,8 @@ transform_epicc_referral_flow <- function(
       thirtyd = thirtyd,
       threem = threem,
       sixm = sixm,
-      reeng = reeng
+      reeng = reeng,
+      reeng_wide = reeng_wide
     ),
     joined_referral_flow = joined
   )
