@@ -92,104 +92,129 @@ cache_files <- list(
 
 # Returns the timestamp of this module's source file.
 cartography_source_timestamp <- function() {
-
-    # Determine ETL repo root depending on execution context
+  
+  # Determine ETL repo root depending on execution context
   if (
     exists(
       "etl_dir"
-    )
-  ) {
+      )
+    ) {
     root <- etl_dir
   } else {
     root <- here::here()
   }
-
-  file.info(
-    file.path(
-      root,
-      "R",
-      "cartography.R"
+  
+  src_path <- file.path(
+    root,
+    "R",
+    "cartography.R"
     )
-  )$mtime
+  
+  if (
+    !file.exists(
+      src_path
+      )
+    ) {
+    return(
+      NA_real_
+      )
+  }
+  
+  file.info(
+    src_path
+    )$mtime
 }
 
-# Returns the most recent timestamp among LUTs that still exist.
-# Only the ZIP metadata Excel file remains a dependency.
-cartography_lut_timestamps <- function() {
+# Returns the timestamp of the ZIP metadata LUT (only remaining external dep).
+cartography_lut_timestamp <- function() {
   zip_lut <- file.path(
     lut_dir,
     "MO ZIP Codes by County_City LUT.xlsx"
   )
+  
   if (
     !file.exists(
       zip_lut
-    )
-  ) return(
-    NA_real_
-  )
-  file.info(
-    zip_lut
-  )$mtime
-}
-
-# Returns the most recent timestamp among cached RDS files.
-cartography_cache_timestamp <- function() {
-  existing <- cache_files[file.exists(unlist(cache_files))]
-
-  if (
-    length(
-      existing
-    ) == 0
-  ) {
+      )
+    ) {
     return(
       NA_real_
-    )
+      )
   }
+  
+  file.info(
+    zip_lut
+    )$mtime
+}
 
-  existing |>
-    purrr::map(
-      file.info
-    ) |>
-    purrr::map_dbl(
-      "mtime"
-    ) |>
-    max(
-      na.rm = TRUE
-    )
+# Returns the timestamp of the authoritative cached RDS file.
+# We use zcta_fips.rds as the anchor because it depends on all upstream pieces.
+cartography_cache_timestamp <- function() {
+  anchor_path <- cache_files$zcta_fips
+  
+  if (
+    !file.exists(
+      anchor_path
+      )
+    ) {
+    return(
+      NA_real_
+      )
+  }
+  
+  file.info(
+    anchor_path
+    )$mtime
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Function cartography cache is valid:
-#
 # Determines whether cached cartography objects can be reused.
 # Cache is valid when:
 #   1. All expected RDS files exist
-#   2. Cached files are newer than:
+#   2. The anchor cache file (zcta_fips.rds) is newer than:
 #        - The ZIP Code metadata LUT
 #        - The cartography.R source file
-#
-# This ensures the cache rebuilds automatically when:
-#   - ZIP Code metadata is updated
-#   - cartography.R is modified
-#   - cache files are missing or deleted
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 cartography_cache_is_valid <- function() {
-  all(
-    file.exists(
-      unlist(
-        cache_files
+  
+  # 1. All cache files must exist
+  if (
+    !all(
+      file.exists(
+        unlist(
+          cache_files
+          )
+        )
       )
-    )
-  ) &&
-    !is.na(
-      cartography_cache_timestamp()
-    ) &&
-    !is.na(
-      cartography_lut_timestamps()
-    ) &&
-    cartography_cache_timestamp() >= cartography_lut_timestamps() &&
-    cartography_cache_timestamp() >= cartography_source_timestamp()
+    ) {
+    return(
+      FALSE
+      )
+  }
+  
+  cache_ts <- cartography_cache_timestamp()
+  lut_ts   <- cartography_lut_timestamp()
+  src_ts   <- cartography_source_timestamp()
+  
+  # 2. All timestamps must be available
+  if (
+    is.na(
+      cache_ts
+      ) ||
+    is.na(
+      lut_ts
+      ) ||
+    is.na(
+      src_ts
+      )
+    ) {
+    return(
+      FALSE
+      )
+  }
+  
+  # 3. Cache must be at least as new as both LUT and source
+  cache_ts >= lut_ts && cache_ts >= src_ts
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
