@@ -39,6 +39,7 @@ data_intermediate/*
 .Ruserdata
 .Rproj.user/
 .Renviron
+*.rds
 
 # R CMD build/check outputs
 /*.tar.gz
@@ -58,6 +59,9 @@ _book/
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
+
+# Ignore {targets} pipeline cache
+_targets*/
 
 # OAuth2 token
 .httr-oauth
