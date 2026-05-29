@@ -1,7 +1,7 @@
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# EPICC ETL PIPELINE (Refactored, Metadata-Driven) ----
+# COMPLEX CARE ETL PIPELINE (Refactored, Metadata-Driven) ----
 #
-# This script implements a metadata-driven column typing ETL for EPICC,
+# This script implements a metadata-driven column typing ETL for COMPLEX CARE,
 # returning a nested list of raw and transformed objects instead of writing to
 # the global environment as has been done in the past. It replaces the legacy
 # monolithic ETL child doc with a clean, testable, and maintainable workflow.
@@ -11,37 +11,40 @@
 #  Core design principles:
 #   - PathClient is the authoritative event timeline (one row per enrollment)
 #   - TIEDENROLLMENT is the canonical episode join key
-#   - Form tables (REF, IC, TWOW, THIRTYD, THREEM, SIXM, REENGAGE) are
-#       joined to PathClient by TIEDENROLLMENT
-#   - SCD summation tables (intake, payor, housing) are joined by
-#       PARENT_DOCSERNO to all possible parent forms (REF/IC/follow-ups)
-#   - Active SCD summation tables are joined into epicc_full_data (one row per
-#       enrollment); “all” SCD summation tables remain long form for reporting
-#   - All form columns are prefixed with form name (ref_, ic_, twow_,
-#       thirtyd_, threem_, sixm_, reengage_, intake_, payor_, housing_)
+#   - Form tables (roster, complex_care_clinical_notes,
+#       complex_care_mercy_beacn_benchmarks, etc.) are joined to PathClient by
+#       TIEDENROLLMENT
+#   - SCD summation tables (payor, housing) are joined by
+#       PARENT_DOCSERNO to all possible parent forms
+#       (complex_care_mercy_beacn_benchmarks)
+#   - Active SCD summation tables are joined into complex_care_full_data (one
+#       row per enrollment); “all” SCD summation tables remain long form for
+#       reporting
+#   - All form columns are prefixed with form name (roster_, ccnotes_,
+#       benchmarks_, payor_, housing_, etc.)
 #
-#       * intake = EPICC SU Tx Referred Agency summation from PWSUBROADTXAGENCY
 #
 # -#-#-#-#-#-#-#-#-#
 #
 # HOW THIS SCRIPT IS ORGANIZED
 #
 # 1. File paths
-#      - All EPICC extract paths are defined in `epicc_paths`, using make_path()
+#      - All COMPLEX CARE extract paths are defined in `complex_care_paths`,
+#        using make_path()
 #
-# 2. Ingestion functions (load_epicc_*)
-#      - Each function loads one EPICC extract using metadata from
+# 2. Ingestion functions (load_complex_care_*)
+#      - Each function loads one COMPLEX CARE extract using metadata from
 #        analytic_fields (loaded via load_analytic_fields() in helpers.R)
 #      - No column types are hard-coded; all typing is metadata-driven
 #      - No renaming or cleanup should occur here
 #
-# 3. Transformation functions (transform_epicc_*)
+# 3. Transformation functions (transform_complex_care_*)
 #      - Each function performs one major transformation step:
-#          * transform_epicc_pathclient()
-#          * transform_epicc_referral_flow()
+#          * transform_complex_care_pathclient()
+#          * transform_complex_care_referral_flow()
 #      - These functions join related extracts
 #      - They return lists so Data Team staff can inspect intermediate objects
-#      - epicc-pathclient is pivoted to ensure one row per enrollment
+#      - complex-care-pathclient is pivoted to ensure one row per enrollment
 #      - Event forms are cleaned to drop notes fields and *_code fields, prefix
 #          all columns with form name, and preserve only client_number and
 #          tiedenrollment as join keys
@@ -49,17 +52,17 @@
 #          columns, and drop client_number from each. parent_docsernos are
 #          joined to the first non-NA docserno from among the parent forms
 #
-# 4. Semantic wrapper function extract_epicc_full_data() returns the final,
-#      analysis-ready, wide EPICC dataset (one row per enrollment). Subsetting
-#      may be performed in the parent report projects using the build_subsets()
-#      function in helpers.R.
+# 4. Semantic wrapper function extract_complex_care_full_data() returns the
+#      final, analysis-ready, wide COMPLEX CARE dataset (one row per
+#      enrollment). Subsetting may be performed in the parent report projects
+#      using the build_subsets() function in helpers.R.
 #
 # 5. Entry point
-#      - run_epicc_etl(...)
+#      - run_complex_care_etl(...)
 #      - Orchestrates ingestion → transformation → assembly
-#      - Designed to be used as a {targets} target (e.g., epicc_etl)
-#      - Returns a nested list of all EPICC objects; writing .rds files is
-#          handled elsewhere in the ETL repo
+#      - Designed to be used as a {targets} target (e.g., complex_care_etl)
+#      - Returns a nested list of all COMPLEX CARE objects; writing .rds files
+#          is handled elsewhere in the ETL repo
 #
 # -#-#-#-#-#-#-#-#-#
 #
@@ -69,42 +72,44 @@
 #   objects without relying on global environment side effects.
 #
 # Example:
-#   * epicc <- run_epicc_etl(epicc_paths)
+#   * complex_care <- run_complex_care_etl(complex_care_paths)
 #
 # Inspect raw ingestion tibbles:
-#   * View(epicc$raw$epicc_client) # raw epicc_client
-#   * View(epicc$raw$epicc_pathclient) # raw epicc_pathclient
+#   * View(complex_care$raw$complex_care_client) # raw complex_care_client
+#   * View(complex_care$raw$complex_care_pathclient) # raw
+#       complex_care_pathclient
 #
 # Inspect intermediate transformations:
-#   * View(epicc$transform$pathclient$joined_pathclient) # pivoted
-#     epicc_pathclient
-#   * View(epicc$transform$referral_flow$joined_referral_flow) # full joined
-#     pathclient with pathway event tibbles and scd tables
+#   * View(complex_care$transform$pathclient$joined_pathclient) # pivoted
+#     complex_care_pathclient
+#   * View(complex_care$transform$referral_flow$joined_referral_flow)
+#       # full joined pathclient with pathway event tibbles and scd tables
 #
 # Inspect final full dataset:
-#   * View(epicc$epicc_full_data) # wide, one row per enrollment
+#   * View(complex_care$complex_care_full_data) # wide, one row per enrollment
 #
 # This structure is intended to make debugging, onboarding, and unit testing
 #   straightforward and to avoid reliance on global environment.
 #
 # However, if needed, one may assign objects to the global environment:
-#   * epicc_pathclient_raw <- epicc$raw$epicc_pathclient
+#   * complex_care_pathclient_raw <- complex_care$raw$complex_care_pathclient
 #
 # -#-#-#-#-#-#-#-#-#
 #
-# ABOUT EPICC DATA STRUCTURE
+# ABOUT COMPLEX CARE DATA STRUCTURE
 #
-# EPICC enrollments are composed of multiple data sources:
+# COMPLEX CARE enrollments are composed of multiple data sources:
 #
-#   * ProviderPlacement (program enrollment and dismissal - not joined)
-#   * Client (demographics)
-#   * PathClient (Pathway metadata bridge)
-#   * Referral
-#   * IC (Initial Contact)
-#   * Intake (active/all; referral to su tx agency and intake attempts)
-#   * Follow-ups (two-week, thirty-day, three-month, six-month)
-#   * Re-engagement (30-day re-engagement attempts)
-#   * Housing and Payor Source (active/all)
+#   * providerPlacement (program enrollment and dismissal - not joined)
+#   * client (demographics)
+#   * pathClient (Pathway metadata bridge)
+#   * roster
+#   * complex_care_clinical_notes
+#   * complex_care_mercy_beacn_benchmarks
+#   * complex_care_pfp_discharge
+#   * complex_care_quality_of_life
+#   * complex_care_shelter_beds
+#   * housing and payor Source (active/all)
 #
 # The transformation layer reconstructs this program life cycle for each
 #   enrollment.
@@ -113,7 +118,7 @@
 #
 # REPORTING SUBSETS
 #
-# EPICC reporting uses two primary fiscal-period subsets:
+# COMPLEX CARE reporting uses two primary fiscal-period subsets:
 #
 #   1. dismissed_within_period
 #        - Used for outcomes
@@ -133,82 +138,62 @@
 # 1. List file paths for all data source files. ----
 #   - Uses function make_path() from helpers.R.
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-epicc_paths <- list(
-  epicc_provider_placement = make_path(
+complex_care_paths <- list(
+  complex_care_provider_placement = make_path(
     "FAMCare Q_ProviderPlacement_BHN/",
     "Q_ProviderPlacement_BHN.csv"
   ),
-  epicc_pathclient = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_PATHCLIENT_ENROLLMENTS_2023_CURRENT.csv"
+  complex_care_pathclient = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_PATHCLIENT_ENROLLMENTS.csv"
   ),
-  epicc_pathway_docsernos = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_PATHWAY_FORM_DOCSERNOS.csv"
+  complex_care_pathway_docsernos = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_PATHWAY_FORM_DOCSERNOS.csv"
   ),
-  epicc_client = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_CLIENT.csv"
+  complex_care_client = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_CLIENT.csv"
   ),
-  epicc_ref = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_REFERRAL.csv"
+  complex_care_roster = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_ROSTER.csv"
   ),
-  epicc_ic = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_IC.csv"
+  complex_care_clinical_notes = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_CLINICAL_NOTES.csv"
   ),
-  epicc_two_week = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_TWO_WEEK.csv"
+  complex_care_mercy_beacn_benchmarks = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_MERCY_BEACN_BENCHMARKS.csv"
   ),
-  epicc_thirty_day = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_THIRTY_DAY.csv"
+  complex_care_pfp_discharge = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_PFP_DISCHARGE.csv"
   ),
-  epicc_three_month = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_THREE_MONTH.csv"
+  complex_care_quality_of_life = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_QUALITY_OF_LIFE.csv"
   ),
-  epicc_six_month = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_SIX_MONTH.csv"
+  complex_care_shelter_beds = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_SHELTER_BEDS.csv"
   ),
-  epicc_reengagement = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_REENGAGEMENT.csv"
+  complex_care_active_housing = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_ACTIVE_HOUSING_STATUS.csv"
   ),
-  epicc_active_intake = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_LATEST_SU_TX_AGENCY.csv"
+  complex_care_all_housing = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_ALL_HOUSING_STATUS.csv"
   ),
-  epicc_all_intake = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_ALL_SU_TX_AGENCY.csv"
+  complex_care_active_payor_source = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_ACTIVE_PAYOR_SOURCE.csv"
   ),
-  epicc_active_housing = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_ACTIVE_HOUSING_STATUS.csv"
-  ),
-  epicc_all_housing = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_ALL_HOUSING_STATUS.csv"
-  ),
-  epicc_active_payor_source = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_ACTIVE_PAYOR_SOURCE.csv"
-  ),
-  epicc_all_payor_source = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_ALL_PAYOR_SOURCE.csv"
-  ),
-  epicc_case_notes = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_CASE_NOTES.csv"
-  ),
-  epicc_support_services_tracker = make_path(
-    "FAMCare EPICC Extract/",
-    "Q_EPICC_SUPPORT_SERVICES_TRACKER.csv"
+  complex_care_all_payor_source = make_path(
+    "FAMCare COMPLEX CARE Extract/",
+    "Q_COMPLEX_CARE_ALL_PAYOR_SOURCE.csv"
   )
 )
 
@@ -217,276 +202,203 @@ epicc_paths <- list(
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_client ----
+# Ingest complex_care_client ----
 #   - one row per client
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_client <- function(
-  epicc_paths,
+load_complex_care_client <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_client,
+    path = complex_care_paths$complex_care_client,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_provider_placement ----
-#   - one row per enrollment - available to supplement epicc_pathclient but not
-#       joined
+# Ingest complex_care_provider_placement ----
+#   - one row per enrollment - available to supplement complex_care_pathclient 
+#       but not joined
 #   - Renames key fields
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_provider_placement <- function(
-  epicc_paths,
+load_complex_care_provider_placement <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_provider_placement,
+    path = complex_care_paths$complex_care_provider_placement,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_pathclient ----
+# Ingest complex_care_pathclient ----
 #   - Renames key fields
-#   - Filters out rows with missing tiedenrollment
 #   - Pivoting handled separately, so this is not one row per enrollment yet
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_pathclient <- function(
-  epicc_paths,
+load_complex_care_pathclient <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_pathclient,
+    path = complex_care_paths$complex_care_pathclient,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_pathway_docsernos ----
+# Ingest complex_care_pathway_docsernos ----
 #   - one row per Pathway Event form
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_pathway_docsernos <- function(
-  epicc_paths,
+load_complex_care_pathway_docsernos <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_pathway_docsernos,
+    path = complex_care_paths$complex_care_pathway_docsernos,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_referral ----
-#   - one row per referral for each enrollment
+# Ingest complex_care_roster ----
+#   - one row per roster for each enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_ref <- function(
-  epicc_paths,
+load_complex_care_roster <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_ref,
+    path = complex_care_paths$complex_care_roster,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_initial_contact ----
-#   - one row per initial contact for each enrollment
+# Ingest complex_care_clinical_notes ----
+#   - one row per note for each enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_ic <- function(
-  epicc_paths,
+load_complex_care_clinical_notes <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_ic,
+    path = complex_care_paths$complex_care_clinical_notes,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_two_week ----
-#   - one row per two-week follow-up for each enrollment
+# Ingest complex_care_mercy_beacn_benchmarks ----
+#   - one row per metrics for each enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_two_week <- function(
-  epicc_paths,
+load_complex_care_mercy_beacn_benchmarks <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_two_week,
+    path = complex_care_paths$complex_care_mercy_beacn_benchmarks,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_thirty_day ----
-#   - one row per thirty-day follow-up for each enrollment
+# Ingest complex_care_pfp_discharge ----
+#   - one row per presenting concerns for each enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_thirty_day <- function(
-  epicc_paths,
+load_complex_care_pfp_discharge <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_thirty_day,
+    path = complex_care_paths$complex_care_pfp_discharge,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_three_month ----
-#   - one row per three-month follow-up for each enrollment
+# Ingest complex_care_quality_of_life ----
+#   - one row per event for each enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_three_month <- function(
-  epicc_paths,
+load_complex_care_quality_of_life <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_three_month,
+    path = complex_care_paths$complex_care_quality_of_life,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_six_month ----
-#   - one row per six-month follow-up for each enrollment
+# Ingest complex_care_shelter_beds ----
+#   - multiple rows per client counseling session for each enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_six_month <- function(
-  epicc_paths,
+load_complex_care_shelter_beds <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_six_month,
+    path = complex_care_paths$complex_care_shelter_beds,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_reengagement ----
-#   - one row per Pathway Event record for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_reengagement <- function(
-  epicc_paths,
-  analytic_fields
-) {
-  load_famcare_extract(
-    path = epicc_paths$epicc_reengagement,
-    analytic_fields = analytic_fields
-  )
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_active_intake ----
-#   - one row per latest SU Tx agency referral
-#   - episode of care-aware: joins to the relevant enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_active_intake <- function(
-  epicc_paths,
-  analytic_fields
-) {
-  load_famcare_extract(
-    path = epicc_paths$epicc_active_intake,
-    analytic_fields = analytic_fields
-  )
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_all_intake ----
-#   - long form with one row per SU Tx agency referral per enrollment, which
-#       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_all_intake <- function(
-  epicc_paths,
-  analytic_fields
-) {
-  load_famcare_extract(
-    path = epicc_paths$epicc_all_intake,
-    analytic_fields = analytic_fields
-  )
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_active_payor_source ----
+# Ingest complex_care_active_payor_source ----
 #   - one row per active payor source per enrollment
 #   - Renames key fields
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_active_payor_source <- function(
-  epicc_paths,
+load_complex_care_active_payor_source <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_active_payor_source,
+    path = complex_care_paths$complex_care_active_payor_source,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_all_payor_source ----
+# Ingest complex_care_all_payor_source ----
 #   - long form with one row per payor source record per enrollment, which
 #       means that this duplicates on enrollments
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_all_payor_source <- function(
-  epicc_paths,
+load_complex_care_all_payor_source <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_all_payor_source,
+    path = complex_care_paths$complex_care_all_payor_source,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_active_housing_status ----
+# Ingest complex_care_active_housing_status ----
 #   - one row per active housing status per enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_active_housing <- function(
-  epicc_paths,
+load_complex_care_active_housing <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_active_housing,
+    path = complex_care_paths$complex_care_active_housing,
     analytic_fields = analytic_fields
   )
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_all_housing_status ----
+# Ingest complex_care_all_housing_status ----
 #   - long form with one row per housing status record per enrollment, which
 #       means that this duplicates on enrollments
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_all_housing <- function(
-  epicc_paths,
+load_complex_care_all_housing <- function(
+  complex_care_paths,
   analytic_fields
 ) {
   load_famcare_extract(
-    path = epicc_paths$epicc_all_housing,
-    analytic_fields = analytic_fields
-  )
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_case_notes ----
-#   - more than one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_case_notes <- function(
-    epicc_paths,
-    analytic_fields
-) {
-  load_famcare_extract(
-    path = epicc_paths$epicc_case_notes,
-    analytic_fields = analytic_fields
-  )
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Ingest epicc_support_services_tracker ----
-#   - more than one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-load_epicc_support_services_tracker <- function(
-    epicc_paths,
-    analytic_fields
-) {
-  load_famcare_extract(
-    path = epicc_paths$epicc_support_services_tracker,
+    path = complex_care_paths$complex_care_all_housing,
     analytic_fields = analytic_fields
   )
 }
@@ -494,8 +406,8 @@ load_epicc_support_services_tracker <- function(
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # 3. Transformation Layer Overview ----
 #
-# The transformation layer converts raw EPICC extracts (loaded via
-# metadata-driven ingestion) into analysis-ready datasets.
+# The transformation layer converts raw Complex Care extracts (loaded via metadata-driven
+# ingestion) into analysis-ready datasets.
 #
 # This layer is intentionally modular. Each function performs one major
 # transformation step so that:
@@ -503,41 +415,43 @@ load_epicc_support_services_tracker <- function(
 #   - each step can be tested independently
 #   - the ETL pipeline is readable and maintainable
 #
-# The major transformation steps are:
-#   1. transform_epicc_pathclient()
+# The major transformation steps are: 1. transform_complex_care_pathclient()
 #        - joins client demographics and relocates to left side of tibble
 #        - pivots Pathway Event form docsernos to columns
 #        - retains only client demographics + enrollment metadata + docsernos
 #
-#   2. transform_epicc_referral_flow()
-#        - joins Pathway Event forms (ref, ic, twow, etc.)
-#        - joins SCD tables (active intake, active payor, active housing)
+# 2. transform_complex_care_referral_flow()
+#        - joins Pathway Event forms (roster, benchmarks, pfp_discharge)
+#        - joins SCD tables (presenting concerns, active payor, active housing)
 #
-#   5. build_epicc_full_data()
+# 5. build_complex_care_full_data()
 #        - returns joined_referral_flow as a unified dataset
 #
-#   6. build_epicc_subsets() (optional)
+# 6. build_complex_care_subsets() (optional)
 #        - constructs reporting subsets, including:
 #            * dismissed-within-fiscal-year (for outcomes)
 #            * initiated-within-fiscal-year (for referral flow)
 #
 # All intermediate objects are returned as list elements so Data Team staff can
 # inspect them interactively during development.
+#
+# All transformed tables are also returned as list elements to allow for
+# troubleshooting.
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Transform epicc_pathclient ----
+# Transform complex_care_pathclient ----
 #   - PathClient is the authoritative event timeline (enrollment, dismissal,
 #       pathway events)
 #   - Pivot to one row per enrollment
 #   - Drop Pathway metadata columns
 #   - Keep analytic fields (enrollment dates, dismissal, agency, etc.)
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-transform_epicc_pathclient <- function(
-  epicc
+transform_complex_care_pathclient <- function(
+  complex_care
 ) {
   # Load raw pathclient extract, which is duplicated by Pathway Event form rows
-  df <- epicc$epicc_pathclient |>
+  df <- complex_care$complex_care_pathclient |>
     filter(
       !is.na(
         tiedenrollment
@@ -551,12 +465,9 @@ transform_epicc_pathclient <- function(
     dplyr::mutate(
       event_key = dplyr::recode(
         pwy_event,
-        "EPICC Referral" = "ref_docserno",
-        "EPICC Initial Contact" = "ic_docserno",
-        "EPICC 2 Week" = "twow_docserno",
-        "EPICC 30 Day" = "thirtyd_docserno",
-        "EPICC 3 Month" = "threem_docserno",
-        "EPICC 6 Month" = "sixm_docserno"
+        "Complex Care Roster" = "roster_docserno",
+        "Clinical BEACN Metrics" = "pfp_metrics_docserno",
+        "PfP Discharge" = "pfp_discharge_docserno"
       )
     )
 
@@ -572,11 +483,7 @@ transform_epicc_pathclient <- function(
     "enrollment_ending_date",
     "dismissal_reason_description",
     "age_at_enrollment",
-    "agency_code",
     "agency_description",
-    "agency_code_non_cfl",
-    "agency_description_non_cfl",
-    "agency_transformation_flag",
     "enroll_path_join_source",
     "pwy_start_date",
     "pwy_end_date",
@@ -601,7 +508,7 @@ transform_epicc_pathclient <- function(
   enrollment <- enrollment |>
     dplyr::left_join(
       dplyr::select(
-        epicc$epicc_client,
+        complex_care$complex_care_client,
         client_number,
         birth_date,
         gender_description,
@@ -627,11 +534,11 @@ transform_epicc_pathclient <- function(
     )
 
   # Pivot only the pwy_forms_docserno column to produce one column per
-  # event_docserno (ref_docserno, ic_docserno, etc.). There should only be one
-  # docserno per event per enrollment. If duplicates exist, values_fn =
-  # first(na.omit(.x)) selects the first non-NA value. Exception reports should
-  # detect duplicates, but this ensures that duplicates do not stop the
-  # pipeline.
+  # event_docserno (roster_docserno, pfp_metrics_docserno, etc.). There should
+  # only be one docserno per event per enrollment. If duplicates exist,
+  # values_fn = first(na.omit(.x)) selects the first non-NA value. Exception
+  # reports should detect duplicates, but this ensures that duplicates do not
+  # stop the pipeline.
   events <- df |>
     dplyr::select(
       client_number,
@@ -645,7 +552,7 @@ transform_epicc_pathclient <- function(
       values_from = pwy_forms_docserno,
       values_fn = ~ first(
         na.omit(
-        .x
+          .x
         )
       ),
       values_fill = NA
@@ -698,13 +605,14 @@ transform_epicc_pathclient <- function(
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Transform referral flow ----
-#   - Joins REF, IC, TWOW, THIRTYD, THREEM, SIXM, REENGAGE
+#   - Joins REF, IC, RP
 #   - Prefixes all columns except tiedenrollment
-#   - Joins SCD summation tables (intake, payor, housing) to ALL parent forms
+#   - Joins SCD summation tables (presconcerns, payor, housing) to ALL parent
+#       forms
 #   - Collapses SCD summation tables to one active row per enrollment
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-transform_epicc_referral_flow <- function(
-  epicc
+transform_complex_care_referral_flow <- function(
+  complex_care
 ) {
 
   # Helper to prefix all columns except tiedenrollment and client_number and
@@ -758,18 +666,8 @@ transform_epicc_referral_flow <- function(
   }
 
   # Clean each active SCD summation tables
-  intake <- clean_form(
-    epicc$epicc_active_intake,
-    "intake_"
-  ) |>
-    dplyr::rename(
-      parent_docserno = intake_parent_docserno
-    ) |>
-    dplyr::select(
-      -client_number
-    )
   payor <- clean_form(
-    epicc$epicc_active_payor_source,
+    complex_care$complex_care_active_payor_source,
     "payor_"
   ) |>
     dplyr::rename(
@@ -778,8 +676,9 @@ transform_epicc_referral_flow <- function(
     dplyr::select(
       -client_number
     )
+
   housing <- clean_form(
-    epicc$epicc_active_housing,
+    complex_care$complex_care_active_housing,
     "housing_"
   ) |>
     dplyr::rename(
@@ -789,12 +688,45 @@ transform_epicc_referral_flow <- function(
       -client_number
     )
 
+  # ccnotes <- clean_form(
+  #   complex_care$complex_care_clinical_notes,
+  #   "ccnotes_"
+  # ) |>
+  #   dplyr::rename(
+  #     parent_docserno = ccnotes_parent_docserno
+  #   ) |>
+  #   dplyr::select(
+  #     -client_number
+  #   )
+
+  qol <- clean_form(
+    complex_care$complex_care_quality_of_life,
+    "qol_"
+  ) |>
+    dplyr::rename(
+      parent_docserno = qol_parent_docserno
+    ) |>
+    dplyr::select(
+      -client_number
+    )
+
+  shelter_beds <- clean_form(
+    complex_care$complex_care_shelter_bed,
+    "shelter_bed_"
+  ) |>
+    dplyr::rename(
+      parent_docserno = shelter_bed_parent_docserno
+    ) |>
+    dplyr::select(
+      -client_number
+    )
+
   # Drop docserno from parent event forms to avoid suffix collisions (.x/.y) due
   # to duplication when joining with pathclient. Pathclient is the authoritative
   # source of docserno values.
-  ref <- clean_form(
-    epicc$epicc_ref,
-    "ref_"
+  roster <- clean_form(
+    complex_care$complex_care_roster,
+    "roster_"
   ) |>
     dplyr::select(
       -tidyselect::ends_with(
@@ -802,9 +734,9 @@ transform_epicc_referral_flow <- function(
       )
     )
 
-  ic <- clean_form(
-    epicc$epicc_ic,
-    "ic_"
+  benchmarks <- clean_form(
+    complex_care$complex_care_mercy_beacn_benchmarks,
+    "benchmarks_"
   ) |>
     dplyr::select(
       -tidyselect::ends_with(
@@ -812,9 +744,9 @@ transform_epicc_referral_flow <- function(
       )
     )
 
-  twow <- clean_form(
-    epicc$epicc_two_week,
-    "twow_"
+  pfp_discharge <- clean_form(
+    complex_care$complex_care_pfp_discharge,
+    "pfp_discharge_"
   ) |>
     dplyr::select(
       -tidyselect::ends_with(
@@ -822,80 +754,18 @@ transform_epicc_referral_flow <- function(
       )
     )
 
-  thirtyd <- clean_form(
-    epicc$epicc_thirty_day,
-    "thirtyd_"
-  ) |>
+  ccnotes <- clean_form(
+    complex_care$complex_care_clinical_notes,
+    "ccnotes_"
+  ) |> 
     dplyr::select(
       -tidyselect::ends_with(
         "docserno"
       )
-    )
-
-  threem <- clean_form(
-    epicc$epicc_three_month,
-    "threem_"
-  ) |>
-    dplyr::select(
-      -tidyselect::ends_with(
-        "docserno"
-      )
-    )
-
-  sixm <- clean_form(
-    epicc$epicc_six_month,
-    "sixm_"
-  ) |>
-    dplyr::select(
-      -tidyselect::ends_with(
-        "docserno"
-      )
-    )
-
-  reeng <- clean_form(
-    epicc$epicc_reengagement,
-    "reengage_"
-  ) |>
-    dplyr::select(
-      -tidyselect::ends_with(
-        "docserno"
-      )
-    )
-
-  reeng_wide <- reeng |>
-    mutate(
-      reengage_period = case_when(
-        reengage_follow_up_form_reengagement == "Two Week" ~ "two_week",
-        reengage_follow_up_form_reengagement == "Thirty Day" ~ "thirty_day",
-        .default = NA_character_
-      )
-    ) |> 
-    group_by(
-      reengage_period,
-      tiedenrollment,
-      client_number
-    ) |> 
-    arrange(
-      desc(
-        reengage_pathway_date
-      )
-    ) |> 
-    summarize(
-      reengage_status = first(
-        na.omit(
-          reengage_status_reengagement
-        )
-      ),
-      .groups = "drop"
-    ) |> 
-    pivot_wider(
-      names_from = reengage_period,
-      values_from = reengage_status,
-      names_prefix = "reengage_status_"
     )
   
   # Start with pivoted pathclient
-  pc <- epicc$pathclient
+  pc <- complex_care$pathclient
 
   # Invariant: parent_map must contain exactly one row per (client_number,
   # tiedenrollment, parent_docserno). If this is violated, SCD collapse will
@@ -904,12 +774,9 @@ transform_epicc_referral_flow <- function(
     dplyr::select(
       client_number,
       tiedenrollment,
-      ref_docserno,
-      ic_docserno,
-      twow_docserno,
-      thirtyd_docserno,
-      threem_docserno,
-      sixm_docserno
+      roster_docserno,
+      pfp_metrics_docserno,
+      pfp_discharge_docserno
     ) |>
     tidyr::pivot_longer(
       cols = tidyselect::ends_with(
@@ -957,12 +824,6 @@ transform_epicc_referral_flow <- function(
       )
   }
 
-  # Diagnostic: intake_one shows which active intake SCD row was selected for
-  # each enrollment. Useful for debugging missing or stale SCD values.
-  intake_one  <- collapse_scd(
-    intake
-  )
-
   # Diagnostic: payor_one shows which active payor source SCD row was selected
   # for each enrollment. Useful for debugging missing or stale SCD values.
   payor_one   <- collapse_scd(
@@ -976,17 +837,27 @@ transform_epicc_referral_flow <- function(
     housing
   )
 
+  # # Diagnostic: intake_one shows which committee notes SCD row was selected for
+  # # each enrollment. Useful for debugging missing or stale SCD values.
+  # ccnotes_one  <- collapse_scd(
+  #   ccnotes
+  # )
+
+  # Diagnostic: intake_one shows which shelter bed SCD row was selected for
+  # each enrollment. Useful for debugging missing or stale SCD values.
+  shelter_beds_one  <- collapse_scd(
+    shelter_beds
+  )
+
+  # Diagnostic: intake_one shows which quality of life SCD row was selected for
+  # each enrollment. Useful for debugging missing or stale SCD values.
+  qol_one  <- collapse_scd(
+    qol
+  )
 
   # Start join sequence with joined "authoritative" pathclient
   joined <- pc |>
     # Join SCD "active" summaries once per enrollment
-    dplyr::left_join(
-      intake_one,
-      by = c(
-        "client_number",
-        "tiedenrollment"
-      )
-    ) |>
     dplyr::left_join(
       payor_one,
       by = c(
@@ -1002,51 +873,57 @@ transform_epicc_referral_flow <- function(
       )
     ) |>
 
+    # # Join SCD "committee notes" once per enrollment
+    # dplyr::left_join(
+    #   ccnotes_one,
+    #   by = c(
+    #     "client_number",
+    #     "tiedenrollment"
+    #   )
+    # ) |>
+
+    # Join SCD "shelter bed" once per enrollment
+    dplyr::left_join(
+      shelter_beds_one,
+      by = c(
+        "client_number",
+        "tiedenrollment"
+      )
+    ) |>
+
+    # Join SCD "quality of life" once per enrollment
+    dplyr::left_join(
+      qol_one,
+      by = c(
+        "client_number",
+        "tiedenrollment"
+      )
+    ) |>
+
     # Join event forms by enrollment
     dplyr::left_join(
-      ref,
+      roster,
       by = join_by(
         "client_number",
         "tiedenrollment"
       )
     ) |>
     dplyr::left_join(
-      ic,
+      benchmarks,
       by = join_by(
         "client_number",
         "tiedenrollment"
       )
     ) |>
     dplyr::left_join(
-      twow,
+      pfp_discharge,
       by = join_by(
         "client_number",
         "tiedenrollment"
       )
-    ) |>
+    ) |> 
     dplyr::left_join(
-      thirtyd,
-      by = join_by(
-        "client_number",
-        "tiedenrollment"
-      )
-    ) |>
-    dplyr::left_join(
-      threem,
-      by = join_by(
-        "client_number",
-        "tiedenrollment"
-      )
-    ) |>
-    dplyr::left_join(
-      sixm,
-      by = join_by(
-        "client_number",
-        "tiedenrollment"
-      )
-    ) |>
-    dplyr::left_join(
-      reeng_wide,
+      ccnotes,
       by = join_by(
         "client_number",
         "tiedenrollment"
@@ -1056,20 +933,18 @@ transform_epicc_referral_flow <- function(
   # Store the final joined referral flow table
   output <- list(
     scd = list(
-      intake_one  = intake_one,
+      # ccnotes_one  = ccnotes_one,
+      shelter_beds_one = shelter_beds_one,
+      qol_one = qol_one,
       payor_one   = payor_one,
       housing_one = housing_one
     ),
     parent_map = parent_map,
     transformed = list(
-      ref = ref,
-      ic = ic,
-      twow = twow,
-      thirtyd = thirtyd,
-      threem = threem,
-      sixm = sixm,
-      reeng = reeng,
-      reeng_wide = reeng_wide
+      roster = roster,
+      ccnotes = ccnotes,
+      benchmarks = benchmarks,
+      pfp_discharge = pfp_discharge
     ),
     joined_referral_flow = joined
   )
@@ -1082,48 +957,43 @@ transform_epicc_referral_flow <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 4. Extract final epicc_full_data ----
+# 4. Extract final complex_care_full_data ----
 #   - Returns the final wide referral_flow table
 #   - Maintained as a semantic wrapper to expose the final wide table as
-#     epicc_full_data
+#     complex_care_full_data
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-extract_epicc_full_data <- function(
+extract_complex_care_full_data <- function(
   referral_flow
 ) {
   referral_flow$joined_referral_flow
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 5. EPICC ETL entry point ----
+# 5. complex care ETL entry point ----
 #   - Loads analytic_fields metadata
-#   - Ingests all EPICC extracts using metadata-driven loaders
-#   - Applies EPICC-specific transformations (e.g., pivoting, referral_flow)
-#   - Returns a named list of all EPICC data objects
+#   - Ingests all complex care extracts using metadata-driven loaders
+#   - Applies complex care-specific transformations (e.g., pivoting, referral_flow)
+#   - Returns a named list of all complex care data objects
 #   - Does not write to disk or modify global env objects as the old ETL code
 #       did.
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-run_epicc_etl <- function(
+run_complex_care_etl <- function(
   analytic_fields,
-  epicc_provider_placement,
-  epicc_pathclient,
-  epicc_pathway_docsernos,
-  epicc_client,
-  epicc_ref,
-  epicc_ic,
-  epicc_two_week,
-  epicc_thirty_day,
-  epicc_three_month,
-  epicc_six_month,
-  epicc_reengagement,
-  epicc_active_intake,
-  epicc_all_intake,
-  epicc_active_payor_source,
-  epicc_all_payor_source,
-  epicc_active_housing,
-  epicc_all_housing,
-  epicc_case_notes,
-  epicc_support_services_tracker,
+  complex_care_client,
+  complex_care_provider_placement,
+  complex_care_pathclient,
+  complex_care_pathway_docsernos,
+  complex_care_roster,
+  complex_care_clinical_notes,
+  complex_care_mercy_beacn_benchmarks,
+  complex_care_pfp_discharge,
+  complex_care_quality_of_life,
+  complex_care_shelter_beds,
+  complex_care_active_payor_source,
+  complex_care_all_payor_source,
+  complex_care_active_housing,
+  complex_care_all_housing,
   start_date = NULL,
   end_date = NULL,
   fiscal_system = c(
@@ -1138,7 +1008,7 @@ run_epicc_etl <- function(
 
   # analytic_fields is passed in by {targets} or default-loaded
   # No internal call to analytic_fields <- load_analytic_fields() is needed
-  
+
   # print(
   #   "Columns from analytic_fields + field_name placeholder"
   # )
@@ -1151,99 +1021,37 @@ run_epicc_etl <- function(
   # =-=-=-=-=-=-=-=-=-=-=-=-=
   # 1. Raw Ingestion
   # =-=-=-=-=-=-=-=-=-=-=-=-=
-  epicc_raw <- list(
-    epicc_client = load_epicc_client(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_provider_placement = load_epicc_provider_placement(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_pathclient = load_epicc_pathclient(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_pathway_docsernos = load_epicc_pathway_docsernos(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_ref = load_epicc_ref(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_ic = load_epicc_ic(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_two_week = load_epicc_two_week(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_thirty_day = load_epicc_thirty_day(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_three_month = load_epicc_three_month(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_six_month = load_epicc_six_month(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_reengagement = load_epicc_reengagement(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_active_intake = load_epicc_active_intake(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_all_intake = load_epicc_all_intake(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_active_payor_source = load_epicc_active_payor_source(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_all_payor_source = load_epicc_all_payor_source(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_active_housing = load_epicc_active_housing(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_all_housing = load_epicc_all_housing(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_case_notes = load_epicc_case_notes(
-      epicc_paths,
-      analytic_fields
-    ),
-    epicc_support_services_tracker = load_epicc_support_services_tracker(
-      epicc_paths,
-      analytic_fields
-    )
+  complex_care_raw <- list(
+    complex_care_client = complex_care_client,
+    complex_care_provider_placement = complex_care_provider_placement,
+    complex_care_pathclient = complex_care_pathclient,
+    complex_care_pathway_docsernos = complex_care_pathway_docsernos,
+    complex_care_roster = complex_care_roster,
+    complex_care_mercy_beacn_benchmarks = complex_care_mercy_beacn_benchmarks,
+    complex_care_pfp_discharge = complex_care_pfp_discharge,
+    complex_care_quality_of_life = complex_care_quality_of_life,
+    complex_care_shelter_beds = complex_care_shelter_beds,
+    complex_care_clinical_notes = complex_care_clinical_notes,
+    complex_care_active_payor_source = complex_care_active_payor_source,
+    complex_care_all_payor_source = complex_care_all_payor_source,
+    complex_care_active_housing = complex_care_active_housing,
+    complex_care_all_housing = complex_care_all_housing
   )
 
   # =-=-=-=-=-=-=-=-=-=-=-=-=
   # 2. Transformations
   # =-=-=-=-=-=-=-=-=-=-=-=-=
-  pathclient <- transform_epicc_pathclient(
-    epicc_raw
+  pathclient <- transform_complex_care_pathclient(
+    complex_care_raw
   )
   # Promote pivoted pathclient to authoritative
-  epicc_raw$pathclient <- pathclient$joined_pathclient
+  complex_care_raw$pathclient <- pathclient$joined_pathclient
 
-  referral_flow <- transform_epicc_referral_flow(
-    epicc_raw
+  referral_flow <- transform_complex_care_referral_flow(
+    complex_care_raw
   )
 
-  full <- extract_epicc_full_data(
+  full <- extract_complex_care_full_data(
     referral_flow
   )
 
@@ -1252,10 +1060,10 @@ run_epicc_etl <- function(
   if (
     !is.null(
       start_date
-      ) && !is.null(
-        end_date
-      )
-    ) {
+    ) && !is.null(
+      end_date
+    )
+  ) {
     subsets <- build_subsets(
       full_data = full,
       start_date = start_date,
@@ -1268,12 +1076,12 @@ run_epicc_etl <- function(
   # 3. Return structured object
   # =-=-=-=-=-=-=-=-=-=-=-=-=
   list(
-    raw = epicc_raw,
+    raw = complex_care_raw,
     transform  = list(
       pathclient = pathclient,
       referral_flow = referral_flow
     ),
-    epicc_full_data = full,
+    complex_care_full_data = full,
     subsets = subsets
   )
 }

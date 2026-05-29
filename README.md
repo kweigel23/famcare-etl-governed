@@ -2,7 +2,7 @@
 Governed transformation pipeline for FAMCare extracts. Standardizes, cleans, and aligns data across programs to produce reporting‑ready, enrollment‑grain datasets for analytics and QA.
 
 ## Overview
-`famcare-etl-governed` implements the governed transformation layer of the BHN FAMCare data ecosystem. It operates on flat files exported from FAMCare as .csv and produces consistent, auditable datasets suitable for compiling written reports, infographic briefs, and program analytics. This ETL is intended to be **program-agnostic** with the ability to support multiple FAMCare-based BHN programs with minimal structural changes.
+`famcare-etl-governed` implements the governed transformation layer of the BHN FAMCare data ecosystem. It operates on flat files exported from FAMCare as `.csv` and produces consistent, auditable datasets. Pipeline execution and dependency tracking are managed by `{targets}`, and selected outputs are materialized as `.rds` files under `data_intermediate/etl/<program_short_code>/` (and `bhn_wide/`). The resulting datasets should be suitable for compiling written reports, infographic briefs, and program analytics. This ETL is intended to be **program-agnostic** with the ability to support multiple FAMCare-based BHN programs with minimal structural changes.
 
 ## Key Features
 This ETL pipeline is built around:
@@ -33,6 +33,16 @@ famcare-etl-governed  ← (this repo)
 Analytics-ready datasets (program_foo_full_data, subsets, diagnostics)
 ```
 
+### Execution model
+
+The pipeline is orchestrated with `{targets}`:
+
+- **Dependency tracking:** Only targets whose inputs have changed are recomputed.
+- **Storage:** Target results are cached in the `_targets` store.
+- **Exported artifacts:** Program-level outputs are written as `.rds` files to `data_intermediate/etl/<program_short_code>/` (and `data_intermediate/etl/bhn_wide/`).
+- **Consumption:** Parent projects (e.g., Quarto reports) call `tar_make()` / `tar_read()` or read the exported `.rds` files.
+
+
 ## Outputs
 The ETL produces a variety of objects in a structured list for downstream use. This list includes:
 - raw tibbles for each extract
@@ -41,7 +51,7 @@ The ETL produces a variety of objects in a structured list for downstream use. T
 - intermediate tibbles `intake_one`, `payor_one`, `housing_one`: tables of active SCD records for QA
 - intermediate tibble `parent_map`: event `docserno` to SCD summation `parent_docserno` mapping for QA
 - `program_foo_full_data`: the final, wide, enrollment-grained dataset
-- optional subsets based on date ranges and fiscal system
+- optional subsets based on date ranges and fiscal system, typically constructed in parent projects via `build_subsets()` using the program's `*_full_data` table
 
 ## Status
 This repository is part of the transition from legacy ETL to a modern, governed pipeline. The legacy workflow will remain active during the transition period.

@@ -53,9 +53,11 @@
 #      function in helpers.R.
 #
 # 5. Entry point
-#      - run_bcr_etl(bcr_paths)
+#      - run_bcr_etl(...)
 #      - Orchestrates ingestion → transformation → assembly
-#      - Returns a nested list of all bcr objects
+#      - Designed to be used as a {targets} target (e.g., bcr_etl)
+#      - Returns a nested list of all bcr objects; writing .rds files is
+#          handled elsewhere in the ETL repo
 #
 # -#-#-#-#-#-#-#-#-#
 #
@@ -962,21 +964,36 @@ extract_bcr_full_data <- function(
 #       did.
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 run_bcr_etl <- function(
-  bcr_paths,
-  start_date = NULL,
-  end_date = NULL,
-  fiscal_system = c(
-    "federal",
-    "state"
-  )
+    analytic_fields,
+    bcr_client,
+    bcr_provider_placement,
+    bcr_pathclient,
+    bcr_pathway_docsernos,
+    bcr_ref,
+    bcr_ic,
+    bcr_referrals_placed,
+    bcr_presenting_concerns,
+    bcr_events,
+    bcr_client_counseling_sessions,
+    bcr_active_payor_source,
+    bcr_all_payor_source,
+    bcr_active_housing,
+    bcr_all_housing,
+    start_date = NULL,
+    end_date = NULL,
+    fiscal_system = c(
+      "federal",
+      "state"
+      )
 ) {
 
   fiscal_system <- match.arg(
     fiscal_system
   )
 
-  analytic_fields <- load_analytic_fields()
-
+  # analytic_fields is passed in by {targets} or default-loaded
+  # No internal call to analytic_fields <- load_analytic_fields() is needed
+  
   # print(
   #   "Columns from analytic_fields + field_name placeholder"
   # )
@@ -990,64 +1007,22 @@ run_bcr_etl <- function(
   # 1. Raw Ingestion
   # =-=-=-=-=-=-=-=-=-=-=-=-=
   bcr_raw <- list(
-    bcr_client = load_bcr_client(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_provider_placement = load_bcr_provider_placement(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_pathclient = load_bcr_pathclient(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_pathway_docsernos = load_bcr_pathway_docsernos(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_ref = load_bcr_ref(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_ic = load_bcr_ic(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_referrals_placed = load_bcr_referrals_placed(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_presenting_concerns = load_bcr_presenting_concerns(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_events = load_bcr_events(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_client_counseling_sessions = load_bcr_client_counseling_sessions(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_active_payor_source = load_bcr_active_payor_source(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_all_payor_source = load_bcr_all_payor_source(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_active_housing = load_bcr_active_housing(
-      bcr_paths,
-      analytic_fields
-    ),
-    bcr_all_housing = load_bcr_all_housing(
-      bcr_paths,
-      analytic_fields
-    )
+    bcr_client = bcr_client,
+    bcr_provider_placement = bcr_provider_placement,
+    bcr_pathclient = bcr_pathclient,
+    bcr_pathway_docsernos = bcr_pathway_docsernos,
+    bcr_ref = bcr_ref,
+    bcr_ic = bcr_ic,
+    bcr_referrals_placed = bcr_referrals_placed,
+    bcr_presenting_concerns = bcr_presenting_concerns,
+    bcr_events = bcr_events,
+    bcr_client_counseling_sessions = bcr_client_counseling_sessions,
+    bcr_active_payor_source = bcr_active_payor_source,
+    bcr_all_payor_source = bcr_all_payor_source,
+    bcr_active_housing = bcr_active_housing,
+    bcr_all_housing = bcr_all_housing
   )
-
+  
   # =-=-=-=-=-=-=-=-=-=-=-=-=
   # 2. Transformations
   # =-=-=-=-=-=-=-=-=-=-=-=-=
