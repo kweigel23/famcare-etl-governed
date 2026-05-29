@@ -109,7 +109,7 @@ list(
     is_description_field = readr::col_logical(),
     is_pivot_field = readr::col_logical(),
     pivot_parent = readr::col_logical(),
-    audit_notes = readr::col_logical()
+    audit_notes = readr::col_character()
    )
   ) |>
    janitor::clean_names() |>
