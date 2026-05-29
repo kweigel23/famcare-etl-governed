@@ -55,9 +55,11 @@
 #      function in helpers.R.
 #
 # 5. Entry point
-#      - run_epicc_etl(epicc_paths)
+#      - run_epicc_etl(...)
 #      - Orchestrates ingestion → transformation → assembly
-#      - Returns a nested list of all EPICC objects
+#      - Designed to be used as a {targets} target (e.g., epicc_etl)
+#      - Returns a nested list of all EPICC objects; writing .rds files is
+#          handled elsewhere in the ETL repo
 #
 # -#-#-#-#-#-#-#-#-#
 #
@@ -1102,7 +1104,26 @@ extract_epicc_full_data <- function(
 #       did.
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 run_epicc_etl <- function(
-  epicc_paths,
+  analytic_fields,
+  epicc_provider_placement,
+  epicc_pathclient,
+  epicc_pathway_docsernos,
+  epicc_client,
+  epicc_ref,
+  epicc_ic,
+  epicc_two_week,
+  epicc_thirty_day,
+  epicc_three_month,
+  epicc_six_month,
+  epicc_reengagement,
+  epicc_active_intake,
+  epicc_all_intake,
+  epicc_active_payor_source,
+  epicc_all_payor_source,
+  epicc_active_housing,
+  epicc_all_housing,
+  epicc_case_notes,
+  epicc_support_services_tracker,
   start_date = NULL,
   end_date = NULL,
   fiscal_system = c(
@@ -1115,8 +1136,9 @@ run_epicc_etl <- function(
     fiscal_system
   )
 
-  analytic_fields <- load_analytic_fields()
-
+  # analytic_fields is passed in by {targets} or default-loaded
+  # No internal call to analytic_fields <- load_analytic_fields() is needed
+  
   # print(
   #   "Columns from analytic_fields + field_name placeholder"
   # )
