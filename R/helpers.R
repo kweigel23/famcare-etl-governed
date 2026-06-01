@@ -1157,5 +1157,28 @@ check_parent_form_alignment <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# 16. VPN / shared drive check ----
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+check_vpn <- function(
+    path = "P:/DATA"
+    ) {
+  if (
+    !dir.exists(
+      path
+      )
+    ) {
+    stop(
+      "Shared drive not found at: ",
+      path,
+      "\nIs your VPN connected and the P: drive mounted?"
+    )
+  }
+  invisible(
+    TRUE
+    )
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # END OF MODULE
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
