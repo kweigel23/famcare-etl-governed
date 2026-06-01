@@ -1,15 +1,15 @@
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# CARTOGRAPHY MODULE (REFACTORED) ----
+# CARTOGRAPHY MODULE (BUILDER FUNCTIONS ONLY) ----
 # Purpose:
-#   - Provide a cached, reusable cartography bundle for reporting
-#   - Build and cache objects only when source data or code changes
-#   - Expose a single public function: load_cartography()
+#   - Provide reusable cartography builder functions for reporting and ETL
+#   - No caching, timestamp, or .rds logic (handled by {targets} in _targets.R)
+#   - Expose pure functions that can be composed in pipelines
 #
-# Cached Outputs (RDS):
-#   - county_two.rds
-#   - county_seven.rds
-#   - zcta_fips.rds
-#   - north_zip_codes.rds
+# Responsibilities:
+#   - Read LUTs from P:/DATA/LUTs
+#   - Build county shapefiles (2-county and 7-county subsets)
+#   - Build ZCTA shapefiles
+#   - Build ZIP → County → ZCTA crosswalk with Promise Zone and North flags
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -22,203 +22,15 @@
 # nolint start: object_usage_linter
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 2. Paths and cache files ----
+# 2. Paths ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+# Shared LUT directory on the enterprise server. Access to this path assumes
+# that the P: drive is mounted (typically via VPN when remote).
 lut_dir <- "P:/DATA/LUTs"
 
-# Determine if the VPN is connected
-if (
-  !dir.exists(
-    lut_dir
-  )
-) {
-  stop(
-    "LUT directory not found: ", lut_dir,
-    "\nIs your VPN connected and the P: drive mounted?"
-  )
-}
-
-# Determine ETL repo root depending on execution context
-if (
-  exists(
-    "etl_dir"
-  )
-) {
-  root <- etl_dir
-} else {
-  root <- here::here()
-}
-
-cache_dir <- file.path(
-  root,
-  "data_intermediate",
-  "cartography"
-)
-
-if (
-  !dir.exists(
-    cache_dir
-  )
-) {
-  dir.create(
-    cache_dir,
-    recursive = TRUE
-  )
-}
-
-cache_files <- list(
-  county_two = file.path(
-    cache_dir,
-    "county_two.rds"
-  ),
-  county_seven = file.path(
-    cache_dir,
-    "county_seven.rds"
-  ),
-  zcta_fips = file.path(
-    cache_dir,
-    "zcta_fips.rds"
-  ),
-  north_zip_codes = file.path(
-    cache_dir,
-    "north_zip_codes.rds"
-  )
-)
-
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 3. Cache validation helpers ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-# Returns the timestamp of this module's source file.
-cartography_source_timestamp <- function() {
-  
-  # Determine ETL repo root depending on execution context
-  if (
-    exists(
-      "etl_dir"
-      )
-    ) {
-    root <- etl_dir
-  } else {
-    root <- here::here()
-  }
-  
-  src_path <- file.path(
-    root,
-    "R",
-    "cartography.R"
-    )
-  
-  if (
-    !file.exists(
-      src_path
-      )
-    ) {
-    return(
-      NA_real_
-      )
-  }
-  
-  file.info(
-    src_path
-    )$mtime
-}
-
-# Returns the timestamp of the ZIP metadata LUT (only remaining external dep).
-cartography_lut_timestamp <- function() {
-  zip_lut <- file.path(
-    lut_dir,
-    "MO ZIP Codes by County_City LUT.xlsx"
-  )
-  
-  if (
-    !file.exists(
-      zip_lut
-      )
-    ) {
-    return(
-      NA_real_
-      )
-  }
-  
-  file.info(
-    zip_lut
-    )$mtime
-}
-
-# Returns the timestamp of the authoritative cached RDS file.
-# We use zcta_fips.rds as the anchor because it depends on all upstream pieces.
-cartography_cache_timestamp <- function() {
-  anchor_path <- cache_files$zcta_fips
-  
-  if (
-    !file.exists(
-      anchor_path
-      )
-    ) {
-    return(
-      NA_real_
-      )
-  }
-  
-  file.info(
-    anchor_path
-    )$mtime
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Determines whether cached cartography objects can be reused.
-# Cache is valid when:
-#   1. All expected RDS files exist
-#   2. The anchor cache file (zcta_fips.rds) is newer than:
-#        - The ZIP Code metadata LUT
-#        - The cartography.R source file
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-cartography_cache_is_valid <- function() {
-  
-  # 1. All cache files must exist
-  if (
-    !all(
-      file.exists(
-        unlist(
-          cache_files
-          )
-        )
-      )
-    ) {
-    return(
-      FALSE
-      )
-  }
-  
-  cache_ts <- cartography_cache_timestamp()
-  lut_ts   <- cartography_lut_timestamp()
-  src_ts   <- cartography_source_timestamp()
-  
-  # 2. All timestamps must be available
-  if (
-    is.na(
-      cache_ts
-      ) ||
-    is.na(
-      lut_ts
-      ) ||
-    is.na(
-      src_ts
-      )
-    ) {
-    return(
-      FALSE
-      )
-  }
-  
-  # 3. Cache must be at least as new as both LUT and source
-  cache_ts >= lut_ts && cache_ts >= src_ts
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 4. Core ETL builders ----
+# 3. Core ETL builders ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # Hard-coded Promise Zone ZIP Codes (stable, federally defined)
@@ -366,6 +178,7 @@ build_north_zip_codes <- function() {
 }
 
 # County shapefiles (minimal fields, geometry retained for mapping)
+# Preserves the logic for county_two and county_seven subsets.
 build_county_shapefiles <- function() {
   county_raw <- tigris::counties(
     state = "29",
@@ -434,10 +247,10 @@ build_zcta <- function() {
       ),
       geoid = matches(
         "^GEOID[0-9]{2}$"
-        ),      # GEOID20
+      ),      # GEOID20
       geoid_aff = matches(
         "AFFGEOID|GEOIDFQ"
-        ), # AFFGEOID20 or GEOIDFQ20
+      ),      # AFFGEOID20 or GEOIDFQ20
       land_area = dplyr::starts_with(
         "ALAND"
       ),
@@ -491,27 +304,12 @@ build_zcta_fips <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 5. Build full cartography bundle ----
+# 4. High-level cartography builder (optional convenience) ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Function build cartography:
-#
-# Performs the full ETL pipeline:
-#   - Reads curated ZIP metadata
-#   - Builds county shapefiles
-#   - Builds ZCTA shapefiles
-#   - Constructs ZIP → County → ZCTA crosswalk
-#   - Adds Promise Zone and North County flags
-#   - Writes all outputs to cached RDS files
-#
-# Called automatically when:
-#   - Cache is missing
-#   - ZIP metadata LUT changes
-#   - cartography.R changes
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-build_cartography <- function() {
+# This function does NOT cache or write to disk. It simply orchestrates the
+# builders and returns a named list. {targets} will decide when/how to run it.
+build_cartography_bundle <- function() {
   pz_zips <- build_promise_zone_zips()
   mo_county_fips_lut <- build_mo_county_fips_lut()
   mo_county_zip_lut <- build_mo_county_zip_lut()
@@ -536,66 +334,11 @@ build_cartography <- function() {
     north_zip_codes
   )
 
-  saveRDS(
-    county_two,
-    cache_files$county_two
-  )
-  saveRDS(
-    county_seven,
-    cache_files$county_seven
-  )
-  saveRDS(
-    zcta_fips,
-    cache_files$zcta_fips
-  )
-  saveRDS(
-    north_zip_codes,
-    cache_files$north_zip_codes
-  )
-
-  invisible(
-    list(
-      county_two = county_two,
-      county_seven = county_seven,
-      zcta_fips = zcta_fips,
-      north_zip_codes = north_zip_codes
-    )
-  )
-}
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 6. Public loader
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-load_cartography <- function() {
-  if (
-    !cartography_cache_is_valid()
-  ) {
-    message(
-      "Rebuilding cartography cache..."
-    )
-    return(
-      build_cartography()
-    )
-  }
-
-  message(
-    "Loading cached cartography..."
-  )
-
   list(
-    county_two = readRDS(
-      cache_files$county_two
-      ),
-    county_seven = readRDS(
-      cache_files$county_seven
-      ),
-    zcta_fips = readRDS(
-      cache_files$zcta_fips
-      ),
-    north_zip_codes = readRDS(
-      cache_files$north_zip_codes
-      )
+    county_two = county_two,
+    county_seven = county_seven,
+    zcta_fips = zcta_fips,
+    north_zip_codes = north_zip_codes
   )
 }
 
