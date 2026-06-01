@@ -34,10 +34,24 @@ tar_option_set(
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 list(
+
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ # VPN Check ----
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
-  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ tar_target(
+  vpn_check,
+  { 
+   check_vpn(
+    "P:/DATA"
+   );
+   TRUE
+   }
+ ),
+
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  # Metadata ----
-  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
  tar_target(
   metadata_workbook,
@@ -121,92 +135,243 @@ list(
  ),
  
  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
- # Add file targets ----
+ # Cartography targets ----
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
+ tar_target(
+  cartography_bundle,
+  {
+    vpn_check
+    build_cartography_bundle()
+  },
+ ),
+ 
+ tar_target(
+  cartography_county_two_rds,
+  {
+   dir.create(
+    "data_intermediate/cartography",
+    recursive = TRUE,
+    showWarnings = FALSE
+   )
+   saveRDS(
+    cartography_bundle$county_two,
+    "data_intermediate/cartography/county_two.rds"
+   )
+   "data_intermediate/cartography/county_two.rds"
+  },
+  format = "file"
+ ),
+ 
+ tar_target(
+  cartography_county_seven_rds,
+  {
+   dir.create(
+    "data_intermediate/cartography",
+    recursive = TRUE,
+    showWarnings = FALSE
+   )
+   saveRDS(
+    cartography_bundle$county_seven,
+    "data_intermediate/cartography/county_seven.rds"
+   )
+   "data_intermediate/cartography/county_seven.rds"
+  },
+  format = "file"
+ ),
+ 
+ tar_target(
+  cartography_zcta_fips_rds,
+  {
+   dir.create(
+    "data_intermediate/cartography",
+    recursive = TRUE,
+    showWarnings = FALSE
+   )
+   saveRDS(
+    cartography_bundle$zcta_fips,
+    "data_intermediate/cartography/zcta_fips.rds"
+   )
+   "data_intermediate/cartography/zcta_fips.rds"
+  },
+  format = "file"
+ ),
+ 
+ tar_target(
+  cartography_north_zip_codes_rds,
+  {
+   dir.create(
+    "data_intermediate/cartography",
+    recursive = TRUE,
+    showWarnings = FALSE
+   )
+   saveRDS(
+    cartography_bundle$north_zip_codes,
+    "data_intermediate/cartography/north_zip_codes.rds"
+   )
+   "data_intermediate/cartography/north_zip_codes.rds"
+  },
+  format = "file"
+ ),
+ 
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ # CCSR diagnosis LUT targets ----
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
+ tar_target(
+  ccsr_dx_lut,
+  {
+    vpn_check
+    build_ccsr_dx_lut()
+  }
+ ),
+ 
+ tar_target(
+  ccsr_dx_lut_rds,
+  {
+   dir.create(
+    "data_intermediate/ccsr",
+    recursive = TRUE,
+    showWarnings = FALSE
+   )
+   saveRDS(
+    ccsr_dx_lut,
+    "data_intermediate/ccsr/ccsr_dx_lut.rds"
+   )
+   "data_intermediate/ccsr/ccsr_dx_lut.rds"
+  },
+  format = "file"
+ ),
+ 
+ # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ # Add extract file targets ----
  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
  ## BCR ----
  
  tar_target(
    bcr_provider_placement_file,
-   bcr_paths$bcr_provider_placement,
+   {
+     vpn_check
+     bcr_paths$bcr_provider_placement
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_pathclient_file,
-   bcr_paths$bcr_pathclient,
+   {
+     vpn_check
+     bcr_paths$bcr_pathclient
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_pathway_docsernos_file,
-   bcr_paths$bcr_pathway_docsernos,
+   {
+     vpn_check
+     bcr_paths$bcr_pathway_docsernos
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_client_file,
-   bcr_paths$bcr_client,
+   {
+     vpn_check
+     bcr_paths$bcr_client
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_ref_file,
-   bcr_paths$bcr_ref,
+   {
+     vpn_check
+     bcr_paths$bcr_ref
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_ic_file,
-   bcr_paths$bcr_ic,
+   {
+     vpn_check
+     bcr_paths$bcr_ic
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_referrals_placed_file,
-   bcr_paths$bcr_referrals_placed,
+   {
+     vpn_check
+     bcr_paths$bcr_referrals_placed
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_presenting_concerns_file,
-   bcr_paths$bcr_presenting_concerns,
+   {
+     vpn_check
+     bcr_paths$bcr_presenting_concerns
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_events_file,
-   bcr_paths$bcr_events,
+   {
+     vpn_check
+     bcr_paths$bcr_events
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_client_counseling_sessions_file,
-   bcr_paths$bcr_client_counseling_sessions,
+   {
+     vpn_check
+     bcr_paths$bcr_client_counseling_sessions
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_active_payor_source_file,
-   bcr_paths$bcr_active_payor_source,
+   {
+     vpn_check
+     bcr_paths$bcr_active_payor_source
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_all_payor_source_file,
-   bcr_paths$bcr_all_payor_source,
+   {
+     vpn_check
+     bcr_paths$bcr_all_payor_source
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_active_housing_file,
-   bcr_paths$bcr_active_housing,
+   {
+     vpn_check
+     bcr_paths$bcr_active_housing
+   },
    format = "file"
  ),
  
  tar_target(
    bcr_all_housing_file,
-   bcr_paths$bcr_all_housing,
+   {
+     vpn_check
+     bcr_paths$bcr_all_housing
+   },
    format = "file"
  ),
  
@@ -214,85 +379,127 @@ list(
  
  tar_target(
   complex_care_provider_placement_file,
-  complex_care_paths$complex_care_provider_placement,
+  {
+    vpn_check
+    complex_care_paths$complex_care_provider_placement
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_pathclient_file,
-  complex_care_paths$complex_care_pathclient,
+  {
+    vpn_check
+    complex_care_paths$complex_care_pathclient
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_pathway_docsernos_file,
-  complex_care_paths$complex_care_pathway_docsernos,
+  {
+    vpn_check
+    complex_care_paths$complex_care_pathway_docsernos
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_client_file,
-  complex_care_paths$complex_care_client,
+  {
+    vpn_check
+    complex_care_paths$complex_care_client
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_roster_file,
-  complex_care_paths$complex_care_roster,
+  {
+    vpn_check
+    complex_care_paths$complex_care_roster
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_clinical_notes_file,
-  complex_care_paths$complex_care_clinical_notes,
+  {
+    vpn_check
+    complex_care_paths$complex_care_clinical_notes
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_mercy_beacn_benchmarks_file,
-  complex_care_paths$complex_care_mercy_beacn_benchmarks,
+  {
+    vpn_check
+    complex_care_paths$complex_care_mercy_beacn_benchmarks
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_pfp_discharge_file,
-  complex_care_paths$complex_care_pfp_discharge,
+  {
+    vpn_check
+    complex_care_paths$complex_care_pfp_discharge
+  },
   format = "file"
  ),
 
  tar_target(
   complex_care_quality_of_life_file,
-  complex_care_paths$complex_care_quality_of_life,
+  {
+    vpn_check
+    complex_care_paths$complex_care_quality_of_life
+  },
   format = "file"
  ),
 
  tar_target(
   complex_care_shelter_beds_file,
-  complex_care_paths$complex_care_shelter_beds,
+  {
+    vpn_check
+    complex_care_paths$complex_care_shelter_beds
+  },
   format = "file"
  ),
 
  tar_target(
   complex_care_active_payor_source_file,
-  complex_care_paths$complex_care_active_payor_source,
+  {
+    vpn_check
+    complex_care_paths$complex_care_active_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_all_payor_source_file,
-  complex_care_paths$complex_care_all_payor_source,
+  {
+    vpn_check
+    complex_care_paths$complex_care_all_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_active_housing_file,
-  complex_care_paths$complex_care_active_housing,
+  {
+    vpn_check
+    complex_care_paths$complex_care_active_housing
+  },
   format = "file"
  ),
  
  tar_target(
   complex_care_all_housing_file,
-  complex_care_paths$complex_care_all_housing,
+  {
+    vpn_check
+    complex_care_paths$complex_care_all_housing
+  },
   format = "file"
  ),
  
@@ -300,115 +507,172 @@ list(
  
  tar_target(
   epicc_provider_placement_file,
-  epicc_paths$epicc_provider_placement,
+  {
+    vpn_check
+     epicc_paths$epicc_provider_placement
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_pathclient_file,
-  epicc_paths$epicc_pathclient,
+  {
+    vpn_check
+    epicc_paths$epicc_pathclient
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_pathway_docsernos_file,
-  epicc_paths$epicc_pathway_docsernos,
+  {
+    vpn_check
+    epicc_paths$epicc_pathway_docsernos
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_client_file,
-  epicc_paths$epicc_client,
+  {
+    vpn_check
+    epicc_paths$epicc_client
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_ref_file,
-  epicc_paths$epicc_ref,
+  {
+    vpn_check
+    epicc_paths$epicc_ref
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_ic_file,
-  epicc_paths$epicc_ic,
+  {
+    vpn_check
+    epicc_paths$epicc_ic
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_two_week_file,
-  epicc_paths$epicc_two_week,
+  {
+    vpn_check
+    epicc_paths$epicc_two_week
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_thirty_day_file,
-  epicc_paths$epicc_thirty_day,
+  {
+    vpn_check
+    epicc_paths$epicc_thirty_day
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_three_month_file,
-  epicc_paths$epicc_three_month,
+  {
+    vpn_check
+    epicc_paths$epicc_three_month
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_six_month_file,
-  epicc_paths$epicc_six_month,
+  {
+    vpn_check
+    epicc_paths$epicc_six_month
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_reengagement_file,
-  epicc_paths$epicc_reengagement,
+  {
+    vpn_check
+    epicc_paths$epicc_reengagement
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_active_intake_file,
-  epicc_paths$epicc_active_intake,
+  {
+    vpn_check
+    epicc_paths$epicc_active_intake
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_all_intake_file,
-  epicc_paths$epicc_all_intake,
+  {
+    vpn_check
+    epicc_paths$epicc_all_intake
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_active_payor_source_file,
-  epicc_paths$epicc_active_payor_source,
+  {
+    vpn_check
+    epicc_paths$epicc_active_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_all_payor_source_file,
-  epicc_paths$epicc_all_payor_source,
+  {
+    vpn_check
+    epicc_paths$epicc_all_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_active_housing_file,
-  epicc_paths$epicc_active_housing,
+  {
+    vpn_check
+    epicc_paths$epicc_active_housing
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_all_housing_file,
-  epicc_paths$epicc_all_housing,
+  {
+    vpn_check
+    epicc_paths$epicc_all_housing
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_case_notes_file,
-  epicc_paths$epicc_case_notes,
+  {
+    vpn_check
+    epicc_paths$epicc_case_notes
+  },
   format = "file"
  ),
  
  tar_target(
   epicc_support_services_tracker_file,
-  epicc_paths$epicc_support_services_tracker,
+  {
+    vpn_check
+    epicc_paths$epicc_support_services_tracker
+  },
   format = "file"
  ),
  
@@ -416,91 +680,136 @@ list(
  
  tar_target(
   ere_provider_placement_file,
-  ere_paths$ere_provider_placement,
+  {
+    vpn_check
+    ere_paths$ere_provider_placement
+  },
   format = "file"
  ),
  
  tar_target(
   ere_pathclient_file,
-  ere_paths$ere_pathclient,
+  {
+    vpn_check
+    ere_paths$ere_pathclient
+  },
   format = "file"
  ),
  
  tar_target(
   ere_pathway_docsernos_file,
-  ere_paths$ere_pathway_docsernos,
+  {
+    vpn_check
+    ere_paths$ere_pathway_docsernos
+  },
   format = "file"
  ),
  
  tar_target(
   ere_client_file,
-  ere_paths$ere_client,
+  {
+    vpn_check
+    ere_paths$ere_client
+  },
   format = "file"
  ),
  
  tar_target(
   ere_ref_file,
-  ere_paths$ere_ref,
+  {
+    vpn_check
+    ere_paths$ere_ref
+  },
   format = "file"
  ),
  
  tar_target(
   ere_hosp_visit_file,
-  ere_paths$ere_hosp_visit,
+  {
+    vpn_check
+    ere_paths$ere_hosp_visit
+  },
   format = "file"
  ),
  
  tar_target(
   ere_ihna_file,
-  ere_paths$ere_ihna,
+  {
+    vpn_check
+    ere_paths$ere_ihna
+  },
   format = "file"
  ),
  
  tar_target(
   ere_three_month_file,
-  ere_paths$ere_three_month,
+  {
+    vpn_check
+    ere_paths$ere_three_month
+  },
   format = "file"
  ),
  
  tar_target(
   ere_six_month_file,
-  ere_paths$ere_six_month,
+  {
+    vpn_check
+    ere_paths$ere_six_month
+  },
   format = "file"
  ),
  
  tar_target(
   ere_bhs_file,
-  ere_paths$ere_bhs,
+  {
+    vpn_check
+    ere_paths$ere_bhs
+  },
   format = "file"
  ),
  
  tar_target(
   ere_active_payor_source_file,
-  ere_paths$ere_active_payor_source,
+  {
+    vpn_check
+    ere_paths$ere_active_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   ere_all_payor_source_file,
-  ere_paths$ere_all_payor_source,
+  {
+    vpn_check
+    ere_paths$ere_all_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   ere_active_housing_file,
-  ere_paths$ere_active_housing,
+  {
+    vpn_check
+    ere_paths$ere_active_housing
+  },
   format = "file"
  ),
  
  tar_target(
   ere_all_housing_file,
-  ere_paths$ere_all_housing,
+  {
+    vpn_check
+    ere_paths$ere_all_housing
+  },
   format = "file"
  ),
  
  tar_target(
   ere_client_needs_file,
-  ere_paths$ere_client_needs,
+  {
+    vpn_check
+    ere_paths$ere_client_needs
+  },
   format = "file"
  ),
  
@@ -508,103 +817,154 @@ list(
  
  tar_target(
   yere_provider_placement_file,
-  yere_paths$yere_provider_placement,
+  {
+    vpn_check
+    yere_paths$yere_provider_placement
+  },
   format = "file"
  ),
  
  tar_target(
   yere_pathclient_file,
-  yere_paths$yere_pathclient,
+  {
+    vpn_check
+    yere_paths$yere_pathclient
+  },
   format = "file"
  ),
  
  tar_target(
   yere_pathway_docsernos_file,
-  yere_paths$yere_pathway_docsernos,
+  {
+    vpn_check
+    yere_paths$yere_pathway_docsernos
+  },
   format = "file"
  ),
  
  tar_target(
   yere_client_file,
-  yere_paths$yere_client,
+  {
+    vpn_check
+    yere_paths$yere_client
+  },
   format = "file"
  ),
  
  tar_target(
   yere_ref_file,
-  yere_paths$yere_ref,
+  {
+    vpn_check
+    yere_paths$yere_ref
+  },
   format = "file"
  ),
  
  tar_target(
   yere_hosp_visit_file,
-  yere_paths$yere_hosp_visit,
+  {
+    vpn_check
+    yere_paths$yere_hosp_visit
+  },
   format = "file"
  ),
  
  tar_target(
   yere_ia_file,
-  yere_paths$yere_ia,
+  {
+    vpn_check
+    yere_paths$yere_ia
+  },
   format = "file"
  ),
  
  tar_target(
   yere_thirty_day_file,
-  yere_paths$yere_thirty_day,
+  {
+    vpn_check
+    yere_paths$yere_thirty_day
+  },
   format = "file"
  ),
  
  tar_target(
   yere_three_month_file,
-  yere_paths$yere_three_month,
+  {
+    vpn_check
+    yere_paths$yere_three_month
+  },
   format = "file"
  ),
  
  tar_target(
   yere_six_month_file,
-  yere_paths$yere_six_month,
+  {
+    vpn_check
+    yere_paths$yere_six_month
+  },
   format = "file"
  ),
  
  tar_target(
   yere_bhs_file,
-  yere_paths$yere_bhs,
+  {
+    vpn_check
+    yere_paths$yere_bhs
+  },
   format = "file"
  ),
  
  tar_target(
   yere_active_payor_source_file,
-  yere_paths$yere_active_payor_source,
+  {
+    vpn_check
+    yere_paths$yere_active_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   yere_all_payor_source_file,
-  yere_paths$yere_all_payor_source,
+  {
+    vpn_check
+    yere_paths$yere_all_payor_source
+  },
   format = "file"
  ),
  
  tar_target(
   yere_active_housing_file,
-  yere_paths$yere_active_housing,
+  {
+    vpn_check
+    yere_paths$yere_active_housing
+  },
   format = "file"
  ),
  
  tar_target(
   yere_all_housing_file,
-  yere_paths$yere_all_housing,
+  {
+    vpn_check
+    yere_paths$yere_all_housing
+  },
   format = "file"
  ),
  
  tar_target(
   yere_client_needs_file,
-  yere_paths$yere_client_needs,
+  {
+    vpn_check
+    yere_paths$yere_client_needs
+  },
   format = "file"
  ),
  
  tar_target(
   yere_caregiver_needs_file,
-  yere_paths$yere_caregiver_needs,
+ {
+    vpn_check
+    yere_paths$yere_caregiver_needs
+  },
   format = "file"
  ),
  
