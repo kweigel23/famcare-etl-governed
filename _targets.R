@@ -65,14 +65,43 @@ list(
  ),
  
  # 1. Extract analytic_fields sheet from Excel into an in-memory tibble
- tar_target(
-  analytic_fields_raw,
-  readxl::read_excel(
-    metadata_workbook,
-    sheet = "analytic_fields"
-    )
- ),
+ # tar_target(
+ #  analytic_fields_raw,
+ #  readxl::read_excel(
+ #    metadata_workbook,
+ #    sheet = "analytic_fields"
+ #    )
+ # ),
  
+ # Force readxl::read_excel() to apply the correct col_types and not guess so it
+ # does not class source_pattern as logical due to blank rows. Add additional
+ # col_types in order as new columns are added.
+ tar_target(
+   analytic_fields_raw,
+   readxl::read_excel(
+     metadata_workbook,
+     sheet = "analytic_fields",
+     col_types = c(
+       "text",  # program_scope
+       "text",  # program
+       "text",  # asset_id
+       "text",  # source_pattern
+       "text",  # delimiter (",", "|", "\t", ";" as relevant for source file)
+       "text",  # view_field_name
+       "text",  # description
+       "text",  # variable_name
+       "text",  # defined_in_r_object
+       "text",  # data_type
+       "text",  # semantic_override
+       "logical", # is_derived_field
+       "logical", # is_description_field
+       "logical", # is_pivot_field
+       "text",    # pivot_parent
+       "text"     # audit_notes
+     )
+   )
+ ),
+
  # 2. Write that tibble to a persistent CSV inside _targets/
  tar_target(
   analytic_fields_csv,
@@ -107,24 +136,18 @@ list(
  # 3. Read the CSV back in with explicit col_types
  tar_target(
   analytic_fields,
-  readr::read_csv(
+  readr::read_delim(
    analytic_fields_csv,
+   delim = ",",
    col_types = readr::cols(
-    program_scope = readr::col_character(),
-    program = readr::col_character(),
-    asset_id = readr::col_character(),
-    view_field_name = readr::col_character(),
-    description = readr::col_character(),
-    variable_name = readr::col_character(),
-    defined_in_r_object = readr::col_character(),
-    data_type = readr::col_character(),
-    semantic_override = readr::col_character(),
-    is_derived_field = readr::col_logical(),
-    is_description_field = readr::col_logical(),
-    is_pivot_field = readr::col_logical(),
-    pivot_parent = readr::col_logical(),
-    audit_notes = readr::col_character()
-   )
+     .default = readr::col_character(),
+     is_derived_field = readr::col_logical(),
+      is_description_field = readr::col_logical(),
+      is_pivot_field = readr::col_logical()
+   ),
+   escape_backslash = FALSE,
+   escape_double = FALSE,
+   trim_ws = TRUE
   ) |>
    janitor::clean_names() |>
    dplyr::mutate(
@@ -146,74 +169,6 @@ list(
   },
  ),
  
- tar_target(
-  cartography_county_two_rds,
-  {
-   dir.create(
-    "data_intermediate/cartography",
-    recursive = TRUE,
-    showWarnings = FALSE
-   )
-   saveRDS(
-    cartography_bundle$county_two,
-    "data_intermediate/cartography/county_two.rds"
-   )
-   "data_intermediate/cartography/county_two.rds"
-  },
-  format = "file"
- ),
- 
- tar_target(
-  cartography_county_seven_rds,
-  {
-   dir.create(
-    "data_intermediate/cartography",
-    recursive = TRUE,
-    showWarnings = FALSE
-   )
-   saveRDS(
-    cartography_bundle$county_seven,
-    "data_intermediate/cartography/county_seven.rds"
-   )
-   "data_intermediate/cartography/county_seven.rds"
-  },
-  format = "file"
- ),
- 
- tar_target(
-  cartography_zcta_fips_rds,
-  {
-   dir.create(
-    "data_intermediate/cartography",
-    recursive = TRUE,
-    showWarnings = FALSE
-   )
-   saveRDS(
-    cartography_bundle$zcta_fips,
-    "data_intermediate/cartography/zcta_fips.rds"
-   )
-   "data_intermediate/cartography/zcta_fips.rds"
-  },
-  format = "file"
- ),
- 
- tar_target(
-  cartography_north_zip_codes_rds,
-  {
-   dir.create(
-    "data_intermediate/cartography",
-    recursive = TRUE,
-    showWarnings = FALSE
-   )
-   saveRDS(
-    cartography_bundle$north_zip_codes,
-    "data_intermediate/cartography/north_zip_codes.rds"
-   )
-   "data_intermediate/cartography/north_zip_codes.rds"
-  },
-  format = "file"
- ),
- 
  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  # CCSR diagnosis LUT targets ----
  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -224,23 +179,6 @@ list(
     vpn_check
     build_ccsr_dx_lut()
   }
- ),
- 
- tar_target(
-  ccsr_dx_lut_rds,
-  {
-   dir.create(
-    "data_intermediate/ccsr",
-    recursive = TRUE,
-    showWarnings = FALSE
-   )
-   saveRDS(
-    ccsr_dx_lut,
-    "data_intermediate/ccsr/ccsr_dx_lut.rds"
-   )
-   "data_intermediate/ccsr/ccsr_dx_lut.rds"
-  },
-  format = "file"
  ),
  
  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -502,6 +440,15 @@ list(
   },
   format = "file"
  ),
+
+ tar_target(
+  complex_care_ext_mercy_utilization_file,
+  {
+    vpn_check
+    complex_care_paths$complex_care_ext_mercy_utilization
+  },
+  format = "file"
+),
  
  ## EPICC ----
  
@@ -1199,6 +1146,14 @@ list(
    analytic_fields = analytic_fields
   )
  ),
+
+ tar_target(
+  complex_care_ext_mercy_utilization_raw,
+  load_famcare_extract(
+    path = complex_care_ext_mercy_utilization_file,
+    analytic_fields = analytic_fields
+  )
+),
  
  ## EPICC ----
  
@@ -1660,7 +1615,8 @@ list(
     complex_care_active_payor_source = complex_care_active_payor_source_raw,
     complex_care_all_payor_source = complex_care_all_payor_source_raw,
     complex_care_active_housing = complex_care_active_housing_raw,
-    complex_care_all_housing = complex_care_all_housing_raw
+    complex_care_all_housing = complex_care_all_housing_raw,
+    complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization_raw
   )
  ),
  
@@ -1822,6 +1778,95 @@ list(
 # Cached outputs (RDS) ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
+## Cartography Bundle ----
+
+tar_target(
+  cartography_county_two_rds,
+  {
+    dir.create(
+      "data_intermediate/cartography",
+      recursive = TRUE,
+      showWarnings = FALSE
+    )
+    saveRDS(
+      cartography_bundle$county_two,
+      "data_intermediate/cartography/county_two.rds"
+    )
+    "data_intermediate/cartography/county_two.rds"
+  },
+  format = "file"
+),
+
+tar_target(
+  cartography_county_seven_rds,
+  {
+    dir.create(
+      "data_intermediate/cartography",
+      recursive = TRUE,
+      showWarnings = FALSE
+    )
+    saveRDS(
+      cartography_bundle$county_seven,
+      "data_intermediate/cartography/county_seven.rds"
+    )
+    "data_intermediate/cartography/county_seven.rds"
+  },
+  format = "file"
+),
+
+tar_target(
+  cartography_zcta_fips_rds,
+  {
+    dir.create(
+      "data_intermediate/cartography",
+      recursive = TRUE,
+      showWarnings = FALSE
+    )
+    saveRDS(
+      cartography_bundle$zcta_fips,
+      "data_intermediate/cartography/zcta_fips.rds"
+    )
+    "data_intermediate/cartography/zcta_fips.rds"
+  },
+  format = "file"
+),
+
+tar_target(
+  cartography_north_zip_codes_rds,
+  {
+    dir.create(
+      "data_intermediate/cartography",
+      recursive = TRUE,
+      showWarnings = FALSE
+    )
+    saveRDS(
+      cartography_bundle$north_zip_codes,
+      "data_intermediate/cartography/north_zip_codes.rds"
+    )
+    "data_intermediate/cartography/north_zip_codes.rds"
+  },
+  format = "file"
+),
+
+## CCSR DX LUT ----
+
+tar_target(
+  ccsr_dx_lut_rds,
+  {
+    dir.create(
+      "data_intermediate/ccsr",
+      recursive = TRUE,
+      showWarnings = FALSE
+    )
+    saveRDS(
+      ccsr_dx_lut,
+      "data_intermediate/ccsr/ccsr_dx_lut.rds"
+    )
+    "data_intermediate/ccsr/ccsr_dx_lut.rds"
+  },
+  format = "file"
+),
+
  ## BCR ----
 
  tar_target(
@@ -1911,18 +1956,26 @@ list(
  
  ## BHN-Wide ----
  
- tar_target(
+tar_target(
   bhn_wide_rds,
-  { dir.create(
-    "data_intermediate/etl/bhn_wide",
-    recursive = TRUE,
-    showWarnings = FALSE
-  )
-   saveRDS(
-    bhn_wide_full_data,
-    "data_intermediate/etl/bhn_wide/bhn_wide_etl.rds"
-   )
-   "data_intermediate/etl/bhn_wide/bhn_wide_etl.rds" },
-  format = "file"
- )
+  {
+    out <- "data_intermediate/etl/bhn_wide/bhn_wide_etl.rds"
+    dir.create(
+      dirname(
+        out
+        ),
+      recursive = TRUE,
+      showWarnings = FALSE
+      )
+    saveRDS(
+      bhn_wide_full_data,
+      out
+      )
+    out
+  },
+  format = "file",
+  deployment = "main"
+)
+
+
 )
