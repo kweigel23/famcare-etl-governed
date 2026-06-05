@@ -542,47 +542,203 @@ make_path <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 9. read FAMCare CSV wrapper ----
+# 9. Latest-file make path helper when rolling datetimes are appended ----
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+make_latest_file_path <- function(
+  dir,
+  pattern = "\\.(csv|xlsx)$",
+  base = p_path
+) {
+  full_dir <- file.path(
+    base,
+    dir,
+    fsep = "/"
+  )
+
+  files <- list.files(
+    path = full_dir,
+    pattern = pattern,
+    full.names = TRUE,
+    ignore.case = TRUE
+  )
+
+  if (
+    length(
+      files
+      ) == 0) {
+    stop(
+      "No files found in directory: ",
+      full_dir,
+      "\nPattern: ",
+      pattern
+    )
+  }
+
+  # Select newest by modification time
+  latest <- files[which.max(file.info(files)$mtime)]
+  latest
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# 10. encoding detection function ----
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+detect_encoding <- function(
+    path
+    ) {
+  raw <- readr::read_file_raw(
+    path
+    )
+  enc <- stringi::stri_enc_detect(
+    raw
+    )[[1]]
+  enc$Encoding[which.max(enc$Confidence)]
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# 11. normalize field name function ----
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+normalize_field_name <- function(
+    x
+  ) {
+  x |>
+    stringr::str_to_lower() |>
+    stringr::str_replace_all(
+      "[^a-z0-9]+",
+      "_"
+    ) |>
+    stringr::str_replace_all(
+      "_+",
+      "_"
+    ) |>
+    stringr::str_replace(
+      "^_|_$",
+      ""
+    )
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# 12. read FAMCare CSV wrapper ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 read_famcare_csv <- function(
   path,
   metadata,
-  na = c("", " "),
+  na = c(
+    "",
+    " "
+    ),
   ...
 ) {
 
-  # 1. Read header only
+  # 1. Read header only (still uses read_csv() here because the header is safe)
   nms <- names(
-    readr::read_csv(
+    readr::read_delim(
       path,
+      delim = metadata$delimiter[[1]],
       n_max = 0,
       show_col_types = FALSE
     )
   ) |>
     tolower()
 
-  # 2. Generate governed col_types from metadata slice
+  # 2. normalize field names so that the header names match the extracts
+  nms <- normalize_field_name(
+    nms
+  )
+  
+  # 3. Generate governed col_types from metadata slice
   col_types <- generate_col_types(
     colnames = nms,
     metadata = metadata
   )
 
-  # 3. Force all date columns to character
-  col_types <- chartr("D", "c", col_types)
+  # 4. Force all date columns to character
+  col_types <- chartr(
+    "D",
+    "c",
+    col_types
+    )
+  
+  # 5a. Get delimiter from metadata (indicating the delimiter type in a file is
+  # now a governed decision based on the value of delimiter column from
+  # analytic_fields table.)
+  delim <- metadata$delimiter[[1]]
 
-  # 4. Read full dataset with patched col_types
-  readr::read_csv(
+  # 5b. Determine encoding
+  fname <- basename(
+    path
+    )
+  is_famcare <- grepl(
+    "^Q_",
+    fname,
+    ignore.case = TRUE
+    )
+  
+  encoding <- if (
+    is_famcare
+    ) {
+    "Windows-1252"
+  } else {
+    detect_encoding(
+      path
+      )
+  }
+
+  # 6. Read full dataset with patched col_types. This uses read_delim(), which
+  # includes a delim argument.
+  df <- readr::read_delim(
     path,
+    delim = delim,
     col_types = col_types,
+    locale = readr::locale(
+      encoding = encoding
+      ),
     na = na,
     show_col_types = FALSE,
     ...
-  ) |>
+  )
+  
+  # Normalize all character columns to UTF-8
+  df <- df |>
+    dplyr::mutate(
+      dplyr::across(
+        where(
+          is.character
+          ),
+        ~ iconv(
+          .x,
+          from = encoding,
+          to = "UTF-8",
+          sub = ""
+          )
+      )
+    ) |>
     janitor::clean_names()
+  
+  df
+  
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 10. Load analytic_fields metadata from governance workbook ----
+# 13. read FAMCare Excel wrapper ----
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+read_famcare_excel <- function(
+  path,
+  metadata
+) {
+
+  df <- readxl::read_excel(
+    path
+    )
+
+  df <- df |>
+    janitor::clean_names()
+
+  df
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# 14. Load analytic_fields metadata from governance workbook ----
 #   - Reads Excel file defined by METADATA_GOVERNANCE_DIR
 #   - Cleans column names
 #   - Used by all program ETL scripts
@@ -617,7 +773,7 @@ load_analytic_fields <- function() {
   # normalize field_name
   analytic_fields <- analytic_fields |>
     dplyr::mutate(
-      field_name = janitor::make_clean_names(
+      field_name = normalize_field_name(
         view_field_name
       )
     )
@@ -626,31 +782,102 @@ load_analytic_fields <- function() {
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 11. Normalize CSV filename → asset_id used in analytic_fields ----
+# 15. Normalize CSV filename → asset_id used in analytic_fields ----
 # Example:
 #   Q_PROVIDERPLACEMENT_BHN.csv → q-providerplacement-bhn
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 extract_asset_id <- function(
-  path
-) {
+    path,
+    analytic_fields
+    ) {
+  
+  filename <- basename(
+    path
+    )
+  
+  # 1. Check metadata patterns first
+  if (
+    "source_pattern" %in% names(
+      analytic_fields
+      )
+    ) {
+    # Step 1: remove NA and blank patterns BEFORE str_detect(), which requires a
+    #   character vector
+    patterns <- analytic_fields |> 
+      dplyr::filter(
+        !is.na(
+          source_pattern
+        ),
+        source_pattern != "",
+        !stringr::str_to_lower(
+          source_pattern
+          ) %in% c(
+            "na"
+            ),
+        !is.na(
+          asset_id
+        ),
+        asset_id != ""
+      ) |> 
+      dplyr::distinct(
+        asset_id,
+        source_pattern
+      )
+    
+    # Step 2: now safely run str_detect(). Because stringr::regex() is not
+    # vectorized, it will return only the first match. Given that there are
+    # multiple rows to match, the next condition of if(nrow(matched) == 1) can
+    # never be true if using only stringr::regex(). Therefore, use
+    # purrr::map_lgl() to force one regex per row, one match per row, with no
+    # vector recycling and no silent dropping resulting in NA on rows after the
+    # first regex match.
+    matched <- patterns |>
+      dplyr::filter(
+        purrr::map_lgl(
+          source_pattern,
+          ~ stringr::str_detect(
+            filename,
+            stringr::regex(
+              .x,
+              ignore_case = TRUE
+              )
+          )
+        )
+      )
+    
+    
+    if (
+      nrow(
+        matched
+        ) == 1
+      ) {
+      return(
+        matched$asset_id
+        )
+    }
+  }
+
+  # 2. Fallback: normalize filename → asset_id
   basename(
     path
-  ) |>
+    ) |>
     tools::file_path_sans_ext() |>
     stringr::str_to_lower() |>
     stringr::str_replace_all(
       "_",
       "-"
-    ) |>
+      ) |>
     stringr::str_replace(
-      "-\\d{4}.*$", ""
-    ) |>
+      "-\\d{4}.*$",
+      ""
+      ) |>
     trimws()
+
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 12. Slice analytic_fields for a specific asset_id ----
+# 16. Slice analytic_fields for a specific asset_id ----
 #   - Ensures each extract uses the correct metadata subset
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -673,7 +900,7 @@ slice_metadata <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 13. Generic metadata-driven ingestion for any FAMCare extract ----
+# 17. Generic metadata-driven ingestion for any FAMCare extract ----
 #   - Normalizes asset_id
 #   - Slices metadata from <- table
 #   - Reads CSV using read_famcare_csv()
@@ -686,7 +913,8 @@ load_famcare_extract <- function(
 ) {
 
   asset_id <- extract_asset_id(
-    path
+    path,
+    analytic_fields
   )
 
   metadata <- slice_metadata(
@@ -696,7 +924,7 @@ load_famcare_extract <- function(
 
   # print("DEBUG: asset_id")
   # print(asset_id)
-  #
+
   # print("DEBUG: metadata slice")
   # print(metadata %>% select(asset_id, view_field_name))
 
@@ -711,11 +939,32 @@ load_famcare_extract <- function(
     )
   }
 
-  # 1. Ingest CSV (all dates are now character due to col_types override in 
-  #    read_famcare_csv)
-  df <- read_famcare_csv(
-    path = path,
-    metadata = metadata
+  # ---- Detect file extension ----
+  ext <- tolower(
+    tools::file_ext(
+      path
+    )
+  )
+
+  # 1. Dispatch to appropriate reader for ingestion ----
+  df <- switch(
+    ext,
+    "csv" = read_famcare_csv(
+      path = path,
+      metadata = metadata
+    ),
+    "xlsx" = read_famcare_excel(
+      path = path,
+      metadata = metadata
+    ),
+    "xls"  = read_famcare_excel(
+      path = path,
+      metadata = metadata
+    ),
+    stop(
+      "Unsupported file extension: ",
+      ext
+    )
   )
 
   # 2. Identify governed date columns from metadata in analytic_fields.
@@ -739,46 +988,17 @@ load_famcare_extract <- function(
         dplyr::across(
           tidyselect::all_of(
             date_cols
-            ),
+          ),
           parse_date_safe
         )
       )
   }
 
-  # # Apply metadata-driven renaming
-  # rename_map <- metadata |>
-  #   dplyr::mutate(
-  #     variable_name = dplyr::na_if(
-  #       variable_name,
-  #       "NA"
-  #     )
-  #   ) |>
-  #   dplyr::filter(
-  #    !is.na(
-  #     variable_name
-  #    )
-  #   ) |>
-  #   dplyr::select(
-  #    view_field_name,
-  #    variable_name
-  #   )
-  #
-  # df <- df |>
-  #   dplyr::rename_with(
-  #     ~ rename_map$variable_name[
-  #       match(
-  #        .x,
-  #        rename_map$view_field_name
-  #       )
-  #     ],
-  #     .cols = rename_map$view_field_name
-  #   )
-
   df
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 14. Program-agnostic data subset function for use in parent projects ----
+# 18. Program-agnostic data subset function for use in parent projects ----
 #   - Fiscal period-neutral (meaning federal or state fiscal systems)
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -823,7 +1043,7 @@ build_subsets <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 15. Diagnostic helper functions ----
+# 19. Diagnostic helper functions ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # Adds function to ensure that epicc_pathclient and epicc_full_data both have
@@ -1157,7 +1377,7 @@ check_parent_form_alignment <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 16. VPN / shared drive check ----
+# 20. VPN / shared drive check ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 check_vpn <- function(

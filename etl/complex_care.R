@@ -194,6 +194,10 @@ complex_care_paths <- list(
   complex_care_all_payor_source = make_path(
     "FAMCare COMPLEX CARE Extract/",
     "Q_COMPLEX_CARE_ALL_PAYOR_SOURCE.csv"
+  ),
+  complex_care_ext_mercy_utilization = make_latest_file_path(
+    "Clinical BEACN Extract/",
+    pattern = "BH_UTILIZATION_ALL.*\\.(csv|xlsx)$"
   )
 )
 
@@ -399,6 +403,20 @@ load_complex_care_all_housing <- function(
 ) {
   load_famcare_extract(
     path = complex_care_paths$complex_care_all_housing,
+    analytic_fields = analytic_fields
+  )
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Ingest complex_care_ext_mercy_utilization ----
+#   - multiple rows per mrn
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+load_complex_care_ext_mercy_utilization <- function(
+    complex_care_paths,
+    analytic_fields
+) {
+  load_famcare_extract(
+    path = complex_care_paths$complex_care_ext_mercy_utilization,
     analytic_fields = analytic_fields
   )
 }
@@ -946,7 +964,9 @@ transform_complex_care_referral_flow <- function(
       benchmarks = benchmarks,
       pfp_discharge = pfp_discharge
     ),
-    joined_referral_flow = joined
+    joined_referral_flow = joined,
+    
+    ext_mercy_utilization = complex_care$complex_care_ext_mercy_utilization
   )
 
   # Return the joined_referral_flow and scd
@@ -994,6 +1014,7 @@ run_complex_care_etl <- function(
   complex_care_all_payor_source,
   complex_care_active_housing,
   complex_care_all_housing,
+  complex_care_ext_mercy_utilization,
   start_date = NULL,
   end_date = NULL,
   fiscal_system = c(
@@ -1035,7 +1056,8 @@ run_complex_care_etl <- function(
     complex_care_active_payor_source = complex_care_active_payor_source,
     complex_care_all_payor_source = complex_care_all_payor_source,
     complex_care_active_housing = complex_care_active_housing,
-    complex_care_all_housing = complex_care_all_housing
+    complex_care_all_housing = complex_care_all_housing,
+    complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization
   )
 
   # =-=-=-=-=-=-=-=-=-=-=-=-=
