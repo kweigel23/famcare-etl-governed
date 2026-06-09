@@ -198,6 +198,14 @@ complex_care_paths <- list(
   complex_care_ext_mercy_utilization = make_latest_file_path(
     "Clinical BEACN Extract/",
     pattern = "BH_UTILIZATION_ALL.*\\.(csv|xlsx)$"
+  ),
+  complex_care_ext_atd_notifications = make_all_file_paths(
+    "EXT ATD Notifications Report",
+    pattern = "ext_atd_notifications_\\d{8}\\.csv$"
+  ),
+  complex_care_ext_atd_watchlist_uploads = make_latest_file_path(
+    "EXT ATD Watchlist Uploads",
+    pattern = "ext_atd_watchlist_\\d{8}\\.csv$"
   )
 )
 
@@ -417,6 +425,37 @@ load_complex_care_ext_mercy_utilization <- function(
 ) {
   load_famcare_extract(
     path = complex_care_paths$complex_care_ext_mercy_utilization,
+    analytic_fields = analytic_fields
+  )
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Ingest complex_care_ext_atd_notifications ----
+#   - multiple rows per mrn
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+load_complex_care_ext_atd_notifications <- function(
+    complex_care_paths,
+    analytic_fields
+) {
+  purrr::map_dfr(
+    complex_care_paths$complex_care_ext_atd_notifications,
+    ~ load_famcare_extract(
+      .x,
+      analytic_fields
+    )
+  )
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Ingest complex_care_ext_atd_watchlist ----
+#   - one rows per mrn
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+load_complex_care_ext_atd_watchlist <- function(
+    complex_care_paths,
+    analytic_fields
+) {
+  load_famcare_extract(
+    path = complex_care_paths$complex_care_ext_atd_watchlist,
     analytic_fields = analytic_fields
   )
 }
@@ -966,7 +1005,9 @@ transform_complex_care_referral_flow <- function(
     ),
     joined_referral_flow = joined,
     
-    ext_mercy_utilization = complex_care$complex_care_ext_mercy_utilization
+    ext_mercy_utilization = complex_care$complex_care_ext_mercy_utilization,
+    ext_atd_notifications = complex_care$complex_care_ext_atd_notifications,
+    ext_atd_watchlist = complex_care$complex_care_ext_atd_watchlist
   )
 
   # Return the joined_referral_flow and scd
@@ -1015,6 +1056,8 @@ run_complex_care_etl <- function(
   complex_care_active_housing,
   complex_care_all_housing,
   complex_care_ext_mercy_utilization,
+  complex_care_ext_atd_notifications,
+  complex_care_ext_atd_watchlist,
   start_date = NULL,
   end_date = NULL,
   fiscal_system = c(
@@ -1057,7 +1100,9 @@ run_complex_care_etl <- function(
     complex_care_all_payor_source = complex_care_all_payor_source,
     complex_care_active_housing = complex_care_active_housing,
     complex_care_all_housing = complex_care_all_housing,
-    complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization
+    complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization,
+    complex_care_ext_atd_notifications = complex_care_ext_atd_notifications,
+    complex_care_ext_atd_watchlist = complex_care_ext_atd_watchlist
   )
 
   # =-=-=-=-=-=-=-=-=-=-=-=-=
