@@ -64,18 +64,10 @@ list(
   format = "file"
  ),
  
- # 1. Extract analytic_fields sheet from Excel into an in-memory tibble
- # tar_target(
- #  analytic_fields_raw,
- #  readxl::read_excel(
- #    metadata_workbook,
- #    sheet = "analytic_fields"
- #    )
- # ),
- 
- # Force readxl::read_excel() to apply the correct col_types and not guess so it
- # does not class source_pattern as logical due to blank rows. Add additional
- # col_types in order as new columns are added.
+ # 1. Extract analytic_fields sheet from Excel into an in-memory tibble.
+ #   Force readxl::read_excel() to apply the correct col_types and not guess so
+ #   it does not class source_pattern as logical due to blank rows. Add
+ #   additional col_types in order as new columns are added.
  tar_target(
    analytic_fields_raw,
    readxl::read_excel(
@@ -449,7 +441,25 @@ list(
   },
   format = "file"
 ),
- 
+
+ tar_target(
+   complex_care_ext_atd_notifications_file,
+   {
+     vpn_check
+     complex_care_paths$complex_care_ext_atd_notifications
+   },
+   format = "file"
+),
+
+tar_target(
+  complex_care_ext_atd_watchlist_file,
+  {
+    vpn_check
+    complex_care_paths$complex_care_ext_atd_watchlist
+  },
+  format = "file"
+),
+
  ## EPICC ----
  
  tar_target(
@@ -1154,7 +1164,23 @@ list(
     analytic_fields = analytic_fields
   )
 ),
+
+ tar_target(
+   complex_care_ext_atd_notifications_raw,
+   load_complex_care_ext_atd_notifications(
+     complex_care_paths,
+     analytic_fields
+   )
+ ),
  
+tar_target(
+  complex_care_ext_atd_watchlist_raw,
+  load_famcare_extract(
+    path = complex_care_ext_atd_watchlist_file,
+    analytic_fields = analytic_fields
+  )
+),
+
  ## EPICC ----
  
  tar_target(
@@ -1616,7 +1642,9 @@ list(
     complex_care_all_payor_source = complex_care_all_payor_source_raw,
     complex_care_active_housing = complex_care_active_housing_raw,
     complex_care_all_housing = complex_care_all_housing_raw,
-    complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization_raw
+    complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization_raw,
+    complex_care_ext_atd_notifications = complex_care_ext_atd_notifications_raw,
+    complex_care_ext_atd_watchlist = complex_care_ext_atd_watchlist_raw
   )
  ),
  
