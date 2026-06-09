@@ -190,6 +190,31 @@ parse_date_safe <- function(
   )
 }
 
+parse_datetime_safe <- function(
+    x
+    ) {
+  suppressWarnings(
+    lubridate::parse_date_time(
+      x,
+      orders = c(
+        "Ymd HMS",
+        "Ymd HM",
+        "Ymd",
+        "Y/m/d HMS",
+        "Y/m/d HM",
+        "Y/m/d",
+        "mdY HMS",
+        "mdY HM",
+        "mdY",
+        "m/d/Y HMS",
+        "m/d/Y HM",
+        "m/d/Y"
+      ),
+      tz = "UTC"
+    )
+  )
+}
+
 first_day <- function(
   date
 ) {
@@ -545,9 +570,11 @@ make_path <- function(
 # 9. Latest-file make path helper when rolling datetimes are appended ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+# p_path is defined in make_path() above.
+
 make_latest_file_path <- function(
   dir,
-  pattern = "\\.(csv|xlsx)$",
+  pattern = "\\.(csv|xlsx|xls)$",
   base = p_path
 ) {
   full_dir <- file.path(
@@ -579,6 +606,47 @@ make_latest_file_path <- function(
   latest <- files[which.max(file.info(files)$mtime)]
   latest
 }
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# 10. read all files and bind function ----
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+# p_path is defined in make_path() above.
+
+make_all_file_paths <- function(
+    path,
+    pattern = "\\.(csv|xlsx|xls)$",
+    base = p_path
+) {
+  full_dir <- file.path(
+    base,
+    path,
+    fsep = "/"
+    )
+  
+  files <- list.files(
+    path = full_dir,
+    pattern = pattern,
+    full.names = TRUE,
+    ignore.case = TRUE
+  )
+  
+  if (
+    length(
+      files
+      ) == 0
+    ) {
+    stop(
+      "No files found in directory: ",
+      full_dir,
+      "\nPattern: ",
+      pattern
+      )
+  }
+  
+  files
+}
+
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # 10. encoding detection function ----
@@ -994,6 +1062,33 @@ load_famcare_extract <- function(
       )
   }
 
+  # 4. Identify governed datetime columns from metadata in analytic_fields.
+  datetime_cols <- metadata |>
+    dplyr::filter(
+      data_type == "datetime"
+      ) |>
+    dplyr::pull(
+      field_name
+      ) |>
+    tolower()
+  
+  # 5. Apply safe datetime parsing to all governed datetime columns.
+  if (
+    length(
+      datetime_cols
+      ) > 0
+    ) {
+    df <- df |>
+      dplyr::mutate(
+        dplyr::across(
+          tidyselect::all_of(
+            datetime_cols
+            ),
+          parse_datetime_safe
+        )
+      )
+  }
+  
   df
 }
 
