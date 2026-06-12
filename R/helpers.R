@@ -649,7 +649,7 @@ make_all_file_paths <- function(
 
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 10. encoding detection function ----
+# 11. encoding detection function ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 detect_encoding <- function(
     path
@@ -664,7 +664,7 @@ detect_encoding <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 11. normalize field name function ----
+# 12. normalize field name function ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 normalize_field_name <- function(
     x
@@ -686,7 +686,7 @@ normalize_field_name <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 12. read FAMCare CSV wrapper ----
+# 13. read FAMCare CSV wrapper ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 read_famcare_csv <- function(
   path,
@@ -788,7 +788,7 @@ read_famcare_csv <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 13. read FAMCare Excel wrapper ----
+# 14. read FAMCare Excel wrapper ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 read_famcare_excel <- function(
   path,
@@ -806,7 +806,7 @@ read_famcare_excel <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 14. Load analytic_fields metadata from governance workbook ----
+# 15. Load analytic_fields metadata from governance workbook ----
 #   - Reads Excel file defined by METADATA_GOVERNANCE_DIR
 #   - Cleans column names
 #   - Used by all program ETL scripts
@@ -850,7 +850,7 @@ load_analytic_fields <- function() {
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 15. Normalize CSV filename → asset_id used in analytic_fields ----
+# 16. Normalize CSV filename → asset_id used in analytic_fields ----
 # Example:
 #   Q_PROVIDERPLACEMENT_BHN.csv → q-providerplacement-bhn
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -945,7 +945,7 @@ extract_asset_id <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 16. Slice analytic_fields for a specific asset_id ----
+# 17. Slice analytic_fields for a specific asset_id ----
 #   - Ensures each extract uses the correct metadata subset
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -968,7 +968,7 @@ slice_metadata <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 17. Generic metadata-driven ingestion for any FAMCare extract ----
+# 18. Generic metadata-driven ingestion for any FAMCare extract ----
 #   - Normalizes asset_id
 #   - Slices metadata from <- table
 #   - Reads CSV using read_famcare_csv()
@@ -1093,7 +1093,7 @@ load_famcare_extract <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 18. Program-agnostic data subset function for use in parent projects ----
+# 19. Program-agnostic data subset function for use in parent projects ----
 #   - Fiscal period-neutral (meaning federal or state fiscal systems)
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -1138,12 +1138,111 @@ build_subsets <- function(
 }
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 19. Diagnostic helper functions ----
+# 20. Complex Care data subset function for use in parent projects ----
+#   - Fiscal period-neutral (meaning federal or state fiscal systems)
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+build_complex_care_subsets <- function(
+    full_data,
+    start_date,
+    end_date,
+    fiscal_system = c(
+      "federal",
+      "state"
+    )
+) {
+  
+  fiscal_system <- match.arg(
+    fiscal_system
+  )
+  
+  base <- build_subsets(
+    full_data = full_data,
+    start_date = start_date,
+    end_date = end_date,
+    fiscal_system = fiscal_system
+  )
+  
+  df <- full_data
+  
+  still_active <- function(
+    .data
+  ) {
+    is.na(
+      .data$enrollment_ending_date
+    ) | 
+      .data$enrollment_ending_date >= end_date
+  }
+  
+  list(
+    # keep the base subsets
+    initiated_within_period  = base$initiated_within_period,
+    dismissed_within_period  = base$dismissed_within_period,
+    
+    # complex care-specific subsets
+    active_selected_not_enrolled_within_period =
+      df |>
+      dplyr::filter(
+        # Not enrolled OR enrolled after period
+        is.na(
+          benchmarks_enrollment_date
+          ) |
+          benchmarks_enrollment_date >= end_date,
+        # Selected (roster added)
+        !is.na(
+          roster_added_cohort_date
+          ),
+        roster_added_cohort_date <= end_date,
+        # Still active
+        still_active(
+          df
+        )
+      ),
+    
+    active_enrolled_not_admitted_within_period =
+      df |>
+      dplyr::filter(
+        # Enrolled
+        !is.na(
+          benchmarks_enrollment_date
+          ),
+        # Not admitted OR admitted after period
+        is.na(
+          benchmarks_complete_admission_service_date
+          ) |
+          benchmarks_complete_admission_service_date >= end_date,
+        # Still active
+        still_active(
+          df
+        )
+      ),
+    
+    active_admitted_no_tx_team_within_period =
+      df |>
+      dplyr::filter(
+        # Admitted
+        !is.na(
+          benchmarks_complete_admission_service_date
+          ),
+        # No treatment team OR assigned after period
+        is.na(
+          benchmarks_treatment_team_assignment_date
+          ) |
+          benchmarks_treatment_team_assignment_date >= end_date,
+        # Still active
+        still_active(
+          df
+        )
+      )
+  )
+}
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# 21. Diagnostic helper functions ----
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-# Adds function to ensure that epicc_pathclient and epicc_full_data both have
-# one row per (client_number, tiedenrollment)
-check_epicc_keys <- function(
+# Adds function to ensure that <program>_pathclient and <program>_full_data both
+# have one row per (client_number, tiedenrollment)
+check_enrollment_keys <- function(
   pathclient,
   full_data
 ) {
@@ -1177,22 +1276,20 @@ check_epicc_keys <- function(
 # is a supplement to exception reports.
 check_scd_parent_matches <- function(
   referral_flow,
-  epicc_raw
+  scd_tables,
+  parent_form_cols
 ) {
 
   parent_forms <- referral_flow |>
     dplyr::select(
-      ref_docserno,
-      ic_docserno,
-      twow_docserno,
-      thirtyd_docserno,
-      threem_docserno,
-      sixm_docserno
-    ) |>
+      all_of(
+        parent_form_cols
+      )
+    ) |> 
     tidyr::pivot_longer(
       everything(),
       values_to = "docserno"
-    ) |>
+    ) |> 
     dplyr::filter(
       !is.na(
         docserno
@@ -1226,114 +1323,79 @@ check_scd_parent_matches <- function(
       )
   }
 
-  dplyr::bind_rows(
-    check_table(
-      epicc_raw$epicc_active_intake,
-      "active_intake"
-    ),
-    check_table(
-      epicc_raw$epicc_active_payor_source,
-      "active_payor"
-    ),
-    check_table(
-      epicc_raw$epicc_active_housing,
-      "active_housing"
-    )
-  )
+  purrr::imap(
+    scd_tables,
+    check_table
+  ) |> 
+    list_rbind()
 }
 
 # A function that counts how many enrollments have each form completed.
 summarise_form_completion <- function(
-  full_data
+  full_data,
+  form_prefixes
   ) {
 
   full_data |>
     dplyr::summarise(
-      n_ref = sum(
-        !is.na(
-          ref_docserno
-        )
-      ),
-      n_ic = sum(
-        !is.na(
-          ic_docserno
-        )
-      ),
-      n_twow = sum(
-        !is.na(
-          twow_docserno
-        )
-      ),
-      n_thirtyd = sum(
-        !is.na(
-          thirtyd_docserno
-        )
-      ),
-      n_threem = sum(
-        !is.na(
-          threem_docserno
-        )
-      ),
-      n_sixm = sum(
-        !is.na(
-          sixm_docserno
-        )
-      ),
-      n_reeng = sum(
-        !is.na(
-          reengage_docserno
-        )
+      dplyr::across(
+        tidyselect::starts_with(
+          form_prefixes
+        ),
+        ~sum(
+          !is.na(
+            .x
+          )
+        ),
+        .names = "n_{.col}"
       )
     )
 }
 
-# A function to show how many enrollments have active intake, payor, and housing
-# status
+# A function to show how many enrollments have active summation (payor source,
+# housing status, intake status, etc.)
 summarise_scd_coverage <- function(
-  full_data
-  ) {
-
-  full_data |>
-    dplyr::summarise(
-      n_intake = sum(
-        !is.na(
-          intake_parent_docserno
-        )
-      ),
-      n_payor = sum(
-        !is.na(
-          payor_parent_docserno
-        )
-      ),
-      n_housing = sum(
-        !is.na(
-          housing_parent_docserno
-        )
+    full,
+    scd_prefixes
+    ) {
+  full |>
+    summarise(
+      across(
+        starts_with(
+          scd_prefixes
+          ),
+        ~ sum(
+          !is.na(
+            .x
+            )
+          ),
+        .names = "n_{.col}"
       )
     )
 }
 
 # A function that ensures that all form columns are correctly prefixed.
 check_column_prefixes <- function(
-  full_data
+  full_data,
+  allowed_prefixes
   ) {
 
-  allowed_prefixes <- c(
-    "ref_",
-    "ic_",
-    "twow_",
-    "thirtyd_",
-    "threem_",
-    "sixm_",
-    "reengage_",
-    "intake_",
-    "payor_",
-    "housing_",
-    "pwy_",
-    "enrollment_",
-    "client_",
-    "tiedenrollment"
-  )
+  # allowed_prefixes <- c(
+  #   "ref_",
+  #   "ic_",
+  #   "twow_",
+  #   "thirtyd_",
+  #   "threem_",
+  #   "sixm_",
+  #   "reengage_",
+  #   "intake_",
+  #   "payor_",
+  #   "housing_",
+  #   "pwy_",
+  #   "enrollment_",
+  #   "client_",
+  #   "tiedenrollment"
+  # )
 
   bad_cols <- names(
     full_data
@@ -1378,98 +1440,38 @@ check_no_duplicate_columns <- function(
 # corresponding parent form exists. This supplements existing exception reports
 # for orphan summation records.
 check_parent_form_alignment <- function(
-  full_data
+  full_data,
+  scd_parent_cols,
+  form_docserno_cols
   ) {
 
-  tibble::tibble(
-    intake_without_parent =
-      full_data |>
-      dplyr::filter(
-        !is.na(
-          intake_parent_docserno
-        )
-      ) |>
-      dplyr::filter(
-        is.na(
-          ref_docserno
-        ) &
-          is.na(
-            ic_docserno
-          ) &
-          is.na(
-            twow_docserno
-          ) &
-          is.na(
-            thirtyd_docserno
-          ) &
-          is.na(
-            threem_docserno
-          ) &
-          is.na(
-            sixm_docserno
-          )
-      ) |>
-      nrow(),
-
-    payor_without_parent =
-      full_data |>
-      dplyr::filter(
-        !is.na(
-          payor_parent_docserno
-        )
-      ) |>
-      dplyr::filter(
-        is.na(
-          ref_docserno
-        ) &
-          is.na(
-            ic_docserno
-          ) &
-          is.na(
-            twow_docserno
-          ) &
-          is.na(
-            thirtyd_docserno
-          ) &
-          is.na(
-            threem_docserno
-          ) &
-          is.na(
-            sixm_docserno
-          )
-      ) |>
-      nrow(),
-
-    housing_without_parent =
-      full_data |>
-      dplyr::filter(
-        !is.na(
-          housing_parent_docserno
-        )
-      ) |>
-      dplyr::filter(
-        is.na(
-          ref_docserno
-        ) &
-          is.na(
-            ic_docserno
-          ) &
-          is.na(
-            twow_docserno
-          ) &
-          is.na(
-            thirtyd_docserno
-          ) &
-          is.na(
-            threem_docserno
-          ) &
-          is.na(
-            sixm_docserno
-          )
-      ) |>
-      nrow()
-  )
-}
+  purrr::map(
+    scd_parent_cols,
+    function(
+      parent_col
+      ) {
+      tibble::tibble(
+        parent_col = parent_col,
+        n_without_parent =
+          full_data |>
+          dplyr::filter(
+            !is.na(
+              .data[[parent_col]]
+              )
+            ) |>
+          dplyr::filter(
+            dplyr::if_all(
+              all_of(
+                form_docserno_cols
+                ),
+              is.na
+              )
+          ) |>
+          nrow()
+      )
+    }
+  ) |> list_rbind()
+}  
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # 20. VPN / shared drive check ----
