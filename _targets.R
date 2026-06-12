@@ -1726,6 +1726,45 @@ tar_target(
     )
   ),
  
+  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+  # Referral Flow Targets (required by diagnostics) ----
+  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  ## BCR ----
+
+  tar_target(
+    bcr_referral_flow,
+    bcr_etl$transform$referral_flow$joined_referral_flow
+  ),
+
+  ## Complex Care ----
+
+  tar_target(
+    complex_care_referral_flow,
+    complex_care_etl$transform$referral_flow$joined_referral_flow
+  ),
+
+  ## EPICC ----
+
+  tar_target(
+    epicc_referral_flow,
+    epicc_etl$transform$referral_flow$joined_referral_flow
+  ),
+
+  ## ERE ----
+
+  tar_target(
+    ere_referral_flow,
+    ere_etl$transform$referral_flow$joined_referral_flow
+  ),
+
+  ## YERE ----
+
+  tar_target(
+    yere_referral_flow,
+    yere_etl$transform$referral_flow$joined_referral_flow
+  ),
+
  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  # Convenience targets exposing just the full_data tables ----
  # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
