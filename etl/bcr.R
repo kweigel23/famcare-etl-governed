@@ -1,4 +1,4 @@
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # bcr ETL PIPELINE (Refactored, Metadata-Driven) ----
 #
 # This script implements a metadata-driven column typing ETL for bcr,
@@ -6,7 +6,7 @@
 # the global environment as has been done in the past. It replaces the legacy
 # monolithic ETL child doc with a clean, testable, and maintainable workflow.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 #  Core design principles:
 #   - PathClient is the authoritative event timeline (one row per enrollment)
@@ -20,7 +20,7 @@
 #   - All form columns are prefixed with form name (ref_, ic_, rp_,
 #       events_, css_, pc_, payor_, housing_)
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # HOW THIS SCRIPT IS ORGANIZED
 #
@@ -59,7 +59,7 @@
 #      - Returns a nested list of all bcr objects; writing .rds files is
 #          handled elsewhere in the ETL repo
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # INSPECTING INTERMEDIATE OBJECTS
 #
@@ -88,7 +88,7 @@
 # However, if needed, one may assign objects to the global environment:
 #   * bcr_pathclient_raw <- bcr$raw$bcr_pathclient
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # ABOUT bcr DATA STRUCTURE
 #
@@ -107,7 +107,7 @@
 # The transformation layer reconstructs this program life cycle for each
 #   enrollment.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # REPORTING SUBSETS
 #
@@ -125,12 +125,12 @@
 # Additional subsets are also possible but have not been added as of this
 #   writing.
 #
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 1. List file paths for all data source files. ----
 #   - Uses function make_path() from helpers.R.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 bcr_paths <- list(
   bcr_provider_placement = make_path(
     "FAMCare Q_ProviderPlacement_BHN/",
@@ -190,14 +190,14 @@ bcr_paths <- list(
   )
 )
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 2. Ingestion/Loading Functions ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_client ----
 #   - one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_client <- function(
   bcr_paths,
   analytic_fields
@@ -208,12 +208,12 @@ load_bcr_client <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_provider_placement ----
 #   - one row per enrollment - available to supplement bcr_pathclient but not
 #       joined
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_provider_placement <- function(
   bcr_paths,
   analytic_fields
@@ -224,11 +224,11 @@ load_bcr_provider_placement <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_pathclient ----
 #   - Renames key fields
 #   - Pivoting handled separately, so this is not one row per enrollment yet
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_pathclient <- function(
   bcr_paths,
   analytic_fields
@@ -239,10 +239,10 @@ load_bcr_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_pathway_docsernos ----
 #   - one row per Pathway Event form
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_pathway_docsernos <- function(
   bcr_paths,
   analytic_fields
@@ -253,10 +253,10 @@ load_bcr_pathway_docsernos <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_referral ----
 #   - one row per referral for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_ref <- function(
   bcr_paths,
   analytic_fields
@@ -267,10 +267,10 @@ load_bcr_ref <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_initial_contact ----
 #   - one row per initial contact for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_ic <- function(
   bcr_paths,
   analytic_fields
@@ -281,10 +281,10 @@ load_bcr_ic <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_referrals_placed ----
 #   - one row per referrals placed for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_referrals_placed <- function(
   bcr_paths,
   analytic_fields
@@ -295,10 +295,10 @@ load_bcr_referrals_placed <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_presenting_concerns ----
 #   - one row per presenting concerns for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_presenting_concerns <- function(
   bcr_paths,
   analytic_fields
@@ -309,10 +309,10 @@ load_bcr_presenting_concerns <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_events ----
 #   - one row per event for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_events <- function(
   bcr_paths,
   analytic_fields
@@ -323,10 +323,10 @@ load_bcr_events <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_client_counseling_sessions ----
 #   - multiple rows per client counseling session for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_client_counseling_sessions <- function(
   bcr_paths,
   analytic_fields
@@ -337,11 +337,11 @@ load_bcr_client_counseling_sessions <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_active_payor_source ----
 #   - one row per active payor source per enrollment
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_active_payor_source <- function(
   bcr_paths,
   analytic_fields
@@ -352,11 +352,11 @@ load_bcr_active_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_all_payor_source ----
 #   - long form with one row per payor source record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_all_payor_source <- function(
   bcr_paths,
   analytic_fields
@@ -367,10 +367,10 @@ load_bcr_all_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_active_housing_status ----
 #   - one row per active housing status per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_active_housing <- function(
   bcr_paths,
   analytic_fields
@@ -381,11 +381,11 @@ load_bcr_active_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest bcr_all_housing_status ----
 #   - long form with one row per housing status record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_bcr_all_housing <- function(
   bcr_paths,
   analytic_fields
@@ -396,7 +396,7 @@ load_bcr_all_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 3. Transformation Layer Overview ----
 #
 # The transformation layer converts raw BCR extracts (loaded via metadata-driven
@@ -430,16 +430,16 @@ load_bcr_all_housing <- function(
 #
 # All transformed tables are also returned as list elements to allow for
 # troubleshooting.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform bcr_pathclient ----
 #   - PathClient is the authoritative event timeline (enrollment, dismissal,
 #       pathway events)
 #   - Pivot to one row per enrollment
 #   - Drop Pathway metadata columns
 #   - Keep analytic fields (enrollment dates, dismissal, agency, etc.)
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_bcr_pathclient <- function(
   bcr
 ) {
@@ -596,13 +596,13 @@ transform_bcr_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform referral flow ----
 #   - Joins REF, IC, RP
 #   - Prefixes all columns except tiedenrollment
 #   - Joins SCD summation tables (presconcerns, payor, housing) to ALL parent forms
 #   - Collapses SCD summation tables to one active row per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_bcr_referral_flow <- function(
   bcr
 ) {
@@ -941,12 +941,12 @@ transform_bcr_referral_flow <- function(
 
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 4. Extract final bcr_full_data ----
 #   - Returns the final wide referral_flow table
 #   - Maintained as a semantic wrapper to expose the final wide table as
 #     bcr_full_data
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 extract_bcr_full_data <- function(
   referral_flow
@@ -954,7 +954,7 @@ extract_bcr_full_data <- function(
   referral_flow$joined_referral_flow
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 5. bcr ETL entry point ----
 #   - Loads analytic_fields metadata
 #   - Ingests all bcr extracts using metadata-driven loaders
@@ -962,7 +962,7 @@ extract_bcr_full_data <- function(
 #   - Returns a named list of all bcr data objects
 #   - Does not write to disk or modify global env objects as the old ETL code
 #       did.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 run_bcr_etl <- function(
     analytic_fields,
     bcr_client,
@@ -1003,9 +1003,9 @@ run_bcr_etl <- function(
   #   )
   # )
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 1. Raw Ingestion
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   bcr_raw <- list(
     bcr_client = bcr_client,
     bcr_provider_placement = bcr_provider_placement,
@@ -1023,9 +1023,9 @@ run_bcr_etl <- function(
     bcr_all_housing = bcr_all_housing
   )
   
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 2. Transformations
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   pathclient <- transform_bcr_pathclient(
     bcr_raw
   )
@@ -1057,9 +1057,9 @@ run_bcr_etl <- function(
     )
   }
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 3. Return structured object
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   list(
     raw = bcr_raw,
     transform  = list(

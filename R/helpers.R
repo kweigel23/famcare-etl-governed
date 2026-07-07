@@ -1,16 +1,16 @@
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # helpers.R
 # General-purpose helper functions used across ETL and reporting.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 library(dplyr)
 library(stringr)
 library(lubridate)
 library(rlang)
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 1. Logical helpers ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 `%nin%` <- function(
   x,
@@ -46,9 +46,9 @@ coalesce_na <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 2. String helpers ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 trim_ws <- function(
   x
@@ -105,9 +105,9 @@ clean_names_bhn <- function(
     )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 3. Numeric helpers ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 pct <- function(
   x,
@@ -152,9 +152,9 @@ round2 <- function(
   z * posneg
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 4. Date helpers (non-fiscal) ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 is_valid_date <- function(
   x
@@ -255,9 +255,9 @@ age_at <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 5. Data-frame helpers ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 drop_empty_rows <- function(
   df
@@ -357,9 +357,9 @@ distinct_across <- function(
     )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 6. Factor and labeling helpers ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 ordered_quarter_factor <- function(
   q
@@ -406,9 +406,9 @@ label_yesno <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 7. Column type metadata helpers ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # Mapping table: SQL Server data types → readr col_types
 sql_to_readr <- tibble::tribble(
@@ -550,9 +550,9 @@ generate_col_types <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 8. make_path helper ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 p_path <- "P:/DATA/Data Files/"
 
 make_path <- function(
@@ -566,9 +566,9 @@ make_path <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 9. Latest-file make path helper when rolling datetimes are appended ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # p_path is defined in make_path() above.
 
@@ -607,9 +607,9 @@ make_latest_file_path <- function(
   latest
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 10. read all files and bind function ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # p_path is defined in make_path() above.
 
@@ -647,10 +647,9 @@ make_all_file_paths <- function(
   files
 }
 
-
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 11. encoding detection function ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 detect_encoding <- function(
     path
     ) {
@@ -663,9 +662,9 @@ detect_encoding <- function(
   enc$Encoding[which.max(enc$Confidence)]
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 12. normalize field name function ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 normalize_field_name <- function(
     x
   ) {
@@ -685,9 +684,9 @@ normalize_field_name <- function(
     )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 13. read FAMCare CSV wrapper ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 read_famcare_csv <- function(
   path,
   metadata,
@@ -787,9 +786,9 @@ read_famcare_csv <- function(
   
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 14. read FAMCare Excel wrapper ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 read_famcare_excel <- function(
   path,
   metadata
@@ -805,12 +804,12 @@ read_famcare_excel <- function(
   df
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 15. Load analytic_fields metadata from governance workbook ----
 #   - Reads Excel file defined by METADATA_GOVERNANCE_DIR
 #   - Cleans column names
 #   - Used by all program ETL scripts
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 
 load_analytic_fields <- function() {
@@ -849,11 +848,11 @@ load_analytic_fields <- function() {
   analytic_fields
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 16. Normalize CSV filename → asset_id used in analytic_fields ----
 # Example:
 #   Q_PROVIDERPLACEMENT_BHN.csv → q-providerplacement-bhn
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 extract_asset_id <- function(
     path,
@@ -944,10 +943,10 @@ extract_asset_id <- function(
 
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 17. Slice analytic_fields for a specific asset_id ----
 #   - Ensures each extract uses the correct metadata subset
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 slice_metadata <- function(
   analytic_fields,
@@ -967,13 +966,13 @@ slice_metadata <- function(
     )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 18. Generic metadata-driven ingestion for any FAMCare extract ----
 #   - Normalizes asset_id
 #   - Slices metadata from <- table
 #   - Reads CSV using read_famcare_csv()
 #   - Applies metadata-driven renaming
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 load_famcare_extract <- function(
   path,
@@ -1092,10 +1091,10 @@ load_famcare_extract <- function(
   df
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 19. Program-agnostic data subset function for use in parent projects ----
 #   - Fiscal period-neutral (meaning federal or state fiscal systems)
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 build_subsets <- function(
   full_data,
@@ -1137,10 +1136,10 @@ build_subsets <- function(
     )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 20. Complex Care data subset function for use in parent projects ----
 #   - Fiscal period-neutral (meaning federal or state fiscal systems)
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 build_complex_care_subsets <- function(
     full_data,
     start_date,
@@ -1236,9 +1235,9 @@ build_complex_care_subsets <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 21. Diagnostic helper functions ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # Adds function to ensure that <program>_pathclient and <program>_full_data both
 # have one row per (client_number, tiedenrollment)
@@ -1473,9 +1472,9 @@ check_parent_form_alignment <- function(
   ) |> list_rbind()
 }  
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 20. VPN / shared drive check ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 check_vpn <- function(
     path = "P:/DATA"
@@ -1496,6 +1495,6 @@ check_vpn <- function(
     )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # END OF MODULE
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===

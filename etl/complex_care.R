@@ -1,4 +1,4 @@
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # COMPLEX CARE ETL PIPELINE (Refactored, Metadata-Driven) ----
 #
 # This script implements a metadata-driven column typing ETL for COMPLEX CARE,
@@ -6,7 +6,7 @@
 # the global environment as has been done in the past. It replaces the legacy
 # monolithic ETL child doc with a clean, testable, and maintainable workflow.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 #  Core design principles:
 #   - PathClient is the authoritative event timeline (one row per enrollment)
@@ -24,7 +24,7 @@
 #       benchmarks_, payor_, housing_, etc.)
 #
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # HOW THIS SCRIPT IS ORGANIZED
 #
@@ -64,7 +64,7 @@
 #      - Returns a nested list of all COMPLEX CARE objects; writing .rds files
 #          is handled elsewhere in the ETL repo
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # INSPECTING INTERMEDIATE OBJECTS
 #
@@ -94,7 +94,7 @@
 # However, if needed, one may assign objects to the global environment:
 #   * complex_care_pathclient_raw <- complex_care$raw$complex_care_pathclient
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # ABOUT COMPLEX CARE DATA STRUCTURE
 #
@@ -114,7 +114,7 @@
 # The transformation layer reconstructs this program life cycle for each
 #   enrollment.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # REPORTING SUBSETS
 #
@@ -132,12 +132,12 @@
 # Additional subsets are also possible but have not been added as of this
 #   writing.
 #
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 1. List file paths for all data source files. ----
 #   - Uses function make_path() from helpers.R.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 complex_care_paths <- list(
   complex_care_provider_placement = make_path(
     "FAMCare Q_ProviderPlacement_BHN/",
@@ -209,14 +209,14 @@ complex_care_paths <- list(
   )
 )
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 2. Ingestion/Loading Functions ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_client ----
 #   - one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_client <- function(
   complex_care_paths,
   analytic_fields
@@ -227,12 +227,12 @@ load_complex_care_client <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_provider_placement ----
 #   - one row per enrollment - available to supplement complex_care_pathclient 
 #       but not joined
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_provider_placement <- function(
   complex_care_paths,
   analytic_fields
@@ -243,11 +243,11 @@ load_complex_care_provider_placement <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_pathclient ----
 #   - Renames key fields
 #   - Pivoting handled separately, so this is not one row per enrollment yet
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_pathclient <- function(
   complex_care_paths,
   analytic_fields
@@ -258,10 +258,10 @@ load_complex_care_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_pathway_docsernos ----
 #   - one row per Pathway Event form
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_pathway_docsernos <- function(
   complex_care_paths,
   analytic_fields
@@ -272,10 +272,10 @@ load_complex_care_pathway_docsernos <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_roster ----
 #   - one row per roster for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_roster <- function(
   complex_care_paths,
   analytic_fields
@@ -286,10 +286,10 @@ load_complex_care_roster <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_clinical_notes ----
 #   - one row per note for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_clinical_notes <- function(
   complex_care_paths,
   analytic_fields
@@ -300,10 +300,10 @@ load_complex_care_clinical_notes <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_mercy_beacn_benchmarks ----
 #   - one row per metrics for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_mercy_beacn_benchmarks <- function(
   complex_care_paths,
   analytic_fields
@@ -314,10 +314,10 @@ load_complex_care_mercy_beacn_benchmarks <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_pfp_discharge ----
 #   - one row per presenting concerns for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_pfp_discharge <- function(
   complex_care_paths,
   analytic_fields
@@ -328,10 +328,10 @@ load_complex_care_pfp_discharge <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_quality_of_life ----
 #   - one row per event for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_quality_of_life <- function(
   complex_care_paths,
   analytic_fields
@@ -342,10 +342,10 @@ load_complex_care_quality_of_life <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_shelter_beds ----
 #   - multiple rows per client counseling session for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_shelter_beds <- function(
   complex_care_paths,
   analytic_fields
@@ -356,11 +356,11 @@ load_complex_care_shelter_beds <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_active_payor_source ----
 #   - one row per active payor source per enrollment
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_active_payor_source <- function(
   complex_care_paths,
   analytic_fields
@@ -371,11 +371,11 @@ load_complex_care_active_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_all_payor_source ----
 #   - long form with one row per payor source record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_all_payor_source <- function(
   complex_care_paths,
   analytic_fields
@@ -386,10 +386,10 @@ load_complex_care_all_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_active_housing_status ----
 #   - one row per active housing status per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_active_housing <- function(
   complex_care_paths,
   analytic_fields
@@ -400,11 +400,11 @@ load_complex_care_active_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_all_housing_status ----
 #   - long form with one row per housing status record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_all_housing <- function(
   complex_care_paths,
   analytic_fields
@@ -415,10 +415,10 @@ load_complex_care_all_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_ext_mercy_utilization ----
 #   - multiple rows per mrn
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_ext_mercy_utilization <- function(
     complex_care_paths,
     analytic_fields
@@ -429,10 +429,10 @@ load_complex_care_ext_mercy_utilization <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_ext_atd_notifications ----
 #   - multiple rows per mrn
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_ext_atd_notifications <- function(
     complex_care_paths,
     analytic_fields
@@ -446,10 +446,10 @@ load_complex_care_ext_atd_notifications <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest complex_care_ext_atd_watchlist ----
 #   - one rows per mrn
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_complex_care_ext_atd_watchlist <- function(
     complex_care_paths,
     analytic_fields
@@ -460,7 +460,7 @@ load_complex_care_ext_atd_watchlist <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 3. Transformation Layer Overview ----
 #
 # The transformation layer converts raw Complex Care extracts (loaded via metadata-driven
@@ -494,16 +494,16 @@ load_complex_care_ext_atd_watchlist <- function(
 #
 # All transformed tables are also returned as list elements to allow for
 # troubleshooting.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform complex_care_pathclient ----
 #   - PathClient is the authoritative event timeline (enrollment, dismissal,
 #       pathway events)
 #   - Pivot to one row per enrollment
 #   - Drop Pathway metadata columns
 #   - Keep analytic fields (enrollment dates, dismissal, agency, etc.)
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_complex_care_pathclient <- function(
   complex_care
 ) {
@@ -660,14 +660,14 @@ transform_complex_care_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform referral flow ----
 #   - Joins REF, IC, RP
 #   - Prefixes all columns except tiedenrollment
 #   - Joins SCD summation tables (presconcerns, payor, housing) to ALL parent
 #       forms
 #   - Collapses SCD summation tables to one active row per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_complex_care_referral_flow <- function(
   complex_care
 ) {
@@ -1017,12 +1017,12 @@ transform_complex_care_referral_flow <- function(
 
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 4. Extract final complex_care_full_data ----
 #   - Returns the final wide referral_flow table
 #   - Maintained as a semantic wrapper to expose the final wide table as
 #     complex_care_full_data
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 extract_complex_care_full_data <- function(
   referral_flow
@@ -1030,7 +1030,7 @@ extract_complex_care_full_data <- function(
   referral_flow$joined_referral_flow
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 5. complex care ETL entry point ----
 #   - Loads analytic_fields metadata
 #   - Ingests all complex care extracts using metadata-driven loaders
@@ -1038,7 +1038,7 @@ extract_complex_care_full_data <- function(
 #   - Returns a named list of all complex care data objects
 #   - Does not write to disk or modify global env objects as the old ETL code
 #       did.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 run_complex_care_etl <- function(
   analytic_fields,
   complex_care_client,
@@ -1082,9 +1082,9 @@ run_complex_care_etl <- function(
   #   )
   # )
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+  # ===
   # 1. Raw Ingestion
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+  # ===
   complex_care_raw <- list(
     complex_care_client = complex_care_client,
     complex_care_provider_placement = complex_care_provider_placement,
@@ -1105,9 +1105,9 @@ run_complex_care_etl <- function(
     complex_care_ext_atd_watchlist = complex_care_ext_atd_watchlist
   )
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+  # ===
   # 2. Transformations
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+  # ===
   pathclient <- transform_complex_care_pathclient(
     complex_care_raw
   )
@@ -1139,9 +1139,9 @@ run_complex_care_etl <- function(
     )
   }
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+  # ===
   # 3. Return structured object
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+  # ===
   list(
     raw = complex_care_raw,
     transform  = list(

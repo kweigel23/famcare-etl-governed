@@ -1,4 +1,4 @@
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # ERE ETL PIPELINE (Refactored, Metadata-Driven) ----
 #
 # This script implements a metadata-driven column typing ETL for ERE,
@@ -6,7 +6,7 @@
 # the global environment as has been done in the past. It replaces the legacy
 # monolithic ETL child doc with a clean, testable, and maintainable workflow.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 #  Core design principles:
 #   - PathClient is the authoritative event timeline (one row per enrollment)
@@ -21,7 +21,7 @@
 #       threem_, sixm_, bhs_, payor_, housing_, client_needs_)
 #
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # HOW THIS SCRIPT IS ORGANIZED
 #
@@ -60,7 +60,7 @@
 #      - Returns a nested list of all ERE objects; writing .rds files is
 #          handled elsewhere in the ETL repo
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # INSPECTING INTERMEDIATE OBJECTS
 #
@@ -89,7 +89,7 @@
 # However, if needed, one may assign objects to the global environment:
 #   * ere_pathclient_raw <- ere$raw$ere_pathclient
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # ABOUT ERE DATA STRUCTURE
 #
@@ -107,7 +107,7 @@
 # The transformation layer reconstructs this program life cycle for each
 #   enrollment.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # REPORTING SUBSETS
 #
@@ -125,12 +125,12 @@
 # Additional subsets are also possible but have not been added as of this
 #   writing.
 #
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 1. List file paths for all data source files. ----
 #   - Uses function make_path() from helpers.R.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 ere_paths <- list(
  ere_provider_placement = make_path(
   "FAMCare Q_ProviderPlacement_BHN/",
@@ -194,14 +194,14 @@ ere_paths <- list(
  )
 )
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 2. Ingestion/Loading Functions ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_client ----
 #   - one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_client <- function(
     ere_paths,
     analytic_fields
@@ -212,12 +212,12 @@ load_ere_client <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_provider_placement ----
 #   - one row per enrollment - available to supplement ere_pathclient but not
 #       joined
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_provider_placement <- function(
     ere_paths,
     analytic_fields
@@ -228,12 +228,12 @@ load_ere_provider_placement <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_pathclient ----
 #   - Renames key fields
 #   - Filters out rows with missing tiedenrollment
 #   - Pivoting handled separately, so this is not one row per enrollment yet
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_pathclient <- function(
     ere_paths,
     analytic_fields
@@ -244,10 +244,10 @@ load_ere_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_pathway_docsernos ----
 #   - one row per Pathway Event form
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_pathway_docsernos <- function(
     ere_paths,
     analytic_fields
@@ -258,10 +258,10 @@ load_ere_pathway_docsernos <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_referral ----
 #   - one row per referral for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_ref <- function(
     ere_paths,
     analytic_fields
@@ -272,10 +272,10 @@ load_ere_ref <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_initial_assessment ----
 #   - one row per initial contact for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_ihna <- function(
     ere_paths,
     analytic_fields
@@ -286,10 +286,10 @@ load_ere_ihna <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_hosp_visit ----
 #   - one row per hospital visit note for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_hosp_visit <- function(
     ere_paths,
     analytic_fields
@@ -300,10 +300,10 @@ load_ere_hosp_visit <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_three_month ----
 #   - one row per three-month follow-up for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_three_month <- function(
     ere_paths,
     analytic_fields
@@ -314,10 +314,10 @@ load_ere_three_month <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_six_month ----
 #   - one row per six-month follow-up for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_six_month <- function(
     ere_paths,
     analytic_fields
@@ -328,10 +328,10 @@ load_ere_six_month <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_bhs ----
 #   - one row per Pathway Event record for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_bhs <- function(
     ere_paths,
     analytic_fields
@@ -342,11 +342,11 @@ load_ere_bhs <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_active_payor_source ----
 #   - one row per active payor source per enrollment
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_active_payor_source <- function(
     ere_paths,
     analytic_fields
@@ -357,11 +357,11 @@ load_ere_active_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_all_payor_source ----
 #   - long form with one row per payor source record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_all_payor_source <- function(
     ere_paths,
     analytic_fields
@@ -372,10 +372,10 @@ load_ere_all_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_active_housing_status ----
 #   - one row per active housing status per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_active_housing <- function(
     ere_paths,
     analytic_fields
@@ -386,11 +386,11 @@ load_ere_active_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_all_housing_status ----
 #   - long form with one row per housing status record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_all_housing <- function(
     ere_paths,
     analytic_fields
@@ -401,10 +401,10 @@ load_ere_all_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest ere_client_needs ----
 #   - more than one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_ere_client_needs <- function(
     ere_paths,
     analytic_fields
@@ -415,7 +415,7 @@ load_ere_client_needs <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 3. Transformation Layer Overview ----
 #
 # The transformation layer converts raw ere extracts (loaded via
@@ -447,16 +447,16 @@ load_ere_client_needs <- function(
 #
 # All intermediate objects are returned as list elements so Data Team staff can
 # inspect them interactively during development.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform ere_pathclient ----
 #   - PathClient is the authoritative event timeline (enrollment, dismissal,
 #       pathway events)
 #   - Pivot to one row per enrollment
 #   - Drop Pathway metadata columns
 #   - Keep analytic fields (enrollment dates, dismissal, agency, etc.)
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_ere_pathclient <- function(
     ere
 ) {
@@ -617,14 +617,14 @@ transform_ere_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform referral flow ----
 #   - Joins ref, ihna, hosp_visit, threem, sixm, bhs
 #   - Prefixes all columns except tiedenrollment and client_number
 #   - Joins SCD summation tables (payor, housing, client needs) to ALL parent 
 #       forms
 #   - Collapses SCD summation tables to one active row per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_ere_referral_flow <- function(
     ere
 ) {
@@ -951,12 +951,12 @@ transform_ere_referral_flow <- function(
   
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 4. Extract final ere_full_data ----
 #   - Returns the final wide referral_flow table
 #   - Maintained as a semantic wrapper to expose the final wide table as
 #       ere_full_data
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 extract_ere_full_data <- function(
     referral_flow
@@ -964,7 +964,7 @@ extract_ere_full_data <- function(
   referral_flow$joined_referral_flow
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 5. ere ETL entry point ----
 #   - Loads analytic_fields metadata
 #   - Ingests all ere extracts using metadata-driven loaders
@@ -972,7 +972,7 @@ extract_ere_full_data <- function(
 #   - Returns a named list of all ere data objects
 #   - Does not write to disk or modify global env objects as the old ETL code
 #       did.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 run_ere_etl <- function(
     analytic_fields,
     ere_provider_placement,
@@ -1066,9 +1066,9 @@ run_ere_etl <- function(
     )
   )
   
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 2. Transformations
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   pathclient <- transform_ere_pathclient(
     ere_raw
   )
@@ -1100,9 +1100,9 @@ run_ere_etl <- function(
     )
   }
   
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 3. Return structured object
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   list(
     raw = ere_raw,
     transform  = list(

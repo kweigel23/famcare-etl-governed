@@ -1,9 +1,9 @@
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # CCSR MODULE (BUILDER FUNCTIONS ONLY) ----
 # Purpose:
 #   - Provide a reusable builder for the CCSR diagnosis lookup table
 #   - No caching, timestamp, or .rds logic (handled by {targets} in _targets.R)
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # nolint start: object_usage_linter
 
@@ -74,6 +74,6 @@ build_ccsr_dx_lut <- function() {
 
 # nolint end
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # END OF CCSR MODULE
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
