@@ -1,4 +1,4 @@
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # EPICC ETL PIPELINE (Refactored, Metadata-Driven) ----
 #
 # This script implements a metadata-driven column typing ETL for EPICC,
@@ -6,7 +6,7 @@
 # the global environment as has been done in the past. It replaces the legacy
 # monolithic ETL child doc with a clean, testable, and maintainable workflow.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 #  Core design principles:
 #   - PathClient is the authoritative event timeline (one row per enrollment)
@@ -22,7 +22,7 @@
 #
 #       * intake = EPICC SU Tx Referred Agency summation from PWSUBROADTXAGENCY
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # HOW THIS SCRIPT IS ORGANIZED
 #
@@ -61,7 +61,7 @@
 #      - Returns a nested list of all EPICC objects; writing .rds files is
 #          handled elsewhere in the ETL repo
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # INSPECTING INTERMEDIATE OBJECTS
 #
@@ -90,7 +90,7 @@
 # However, if needed, one may assign objects to the global environment:
 #   * epicc_pathclient_raw <- epicc$raw$epicc_pathclient
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # ABOUT EPICC DATA STRUCTURE
 #
@@ -109,7 +109,7 @@
 # The transformation layer reconstructs this program life cycle for each
 #   enrollment.
 #
-# -#-#-#-#-#-#-#-#-#
+# ===
 #
 # REPORTING SUBSETS
 #
@@ -127,12 +127,12 @@
 # Additional subsets are also possible but have not been added as of this
 #   writing.
 #
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 1. List file paths for all data source files. ----
 #   - Uses function make_path() from helpers.R.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 epicc_paths <- list(
   epicc_provider_placement = make_path(
     "FAMCare Q_ProviderPlacement_BHN/",
@@ -212,14 +212,14 @@ epicc_paths <- list(
   )
 )
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 2. Ingestion/Loading Functions ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_client ----
 #   - one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_client <- function(
   epicc_paths,
   analytic_fields
@@ -230,12 +230,12 @@ load_epicc_client <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_provider_placement ----
 #   - one row per enrollment - available to supplement epicc_pathclient but not
 #       joined
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_provider_placement <- function(
   epicc_paths,
   analytic_fields
@@ -246,12 +246,12 @@ load_epicc_provider_placement <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_pathclient ----
 #   - Renames key fields
 #   - Filters out rows with missing tiedenrollment
 #   - Pivoting handled separately, so this is not one row per enrollment yet
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_pathclient <- function(
   epicc_paths,
   analytic_fields
@@ -262,10 +262,10 @@ load_epicc_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_pathway_docsernos ----
 #   - one row per Pathway Event form
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_pathway_docsernos <- function(
   epicc_paths,
   analytic_fields
@@ -276,10 +276,10 @@ load_epicc_pathway_docsernos <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_referral ----
 #   - one row per referral for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_ref <- function(
   epicc_paths,
   analytic_fields
@@ -290,10 +290,10 @@ load_epicc_ref <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_initial_contact ----
 #   - one row per initial contact for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_ic <- function(
   epicc_paths,
   analytic_fields
@@ -304,10 +304,10 @@ load_epicc_ic <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_two_week ----
 #   - one row per two-week follow-up for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_two_week <- function(
   epicc_paths,
   analytic_fields
@@ -318,10 +318,10 @@ load_epicc_two_week <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_thirty_day ----
 #   - one row per thirty-day follow-up for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_thirty_day <- function(
   epicc_paths,
   analytic_fields
@@ -332,10 +332,10 @@ load_epicc_thirty_day <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_three_month ----
 #   - one row per three-month follow-up for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_three_month <- function(
   epicc_paths,
   analytic_fields
@@ -346,10 +346,10 @@ load_epicc_three_month <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_six_month ----
 #   - one row per six-month follow-up for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_six_month <- function(
   epicc_paths,
   analytic_fields
@@ -360,10 +360,10 @@ load_epicc_six_month <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_reengagement ----
 #   - one row per Pathway Event record for each enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_reengagement <- function(
   epicc_paths,
   analytic_fields
@@ -374,11 +374,11 @@ load_epicc_reengagement <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_active_intake ----
 #   - one row per latest SU Tx agency referral
 #   - episode of care-aware: joins to the relevant enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_active_intake <- function(
   epicc_paths,
   analytic_fields
@@ -389,11 +389,11 @@ load_epicc_active_intake <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_all_intake ----
 #   - long form with one row per SU Tx agency referral per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_all_intake <- function(
   epicc_paths,
   analytic_fields
@@ -404,11 +404,11 @@ load_epicc_all_intake <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_active_payor_source ----
 #   - one row per active payor source per enrollment
 #   - Renames key fields
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_active_payor_source <- function(
   epicc_paths,
   analytic_fields
@@ -419,11 +419,11 @@ load_epicc_active_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_all_payor_source ----
 #   - long form with one row per payor source record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_all_payor_source <- function(
   epicc_paths,
   analytic_fields
@@ -434,10 +434,10 @@ load_epicc_all_payor_source <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_active_housing_status ----
 #   - one row per active housing status per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_active_housing <- function(
   epicc_paths,
   analytic_fields
@@ -448,11 +448,11 @@ load_epicc_active_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_all_housing_status ----
 #   - long form with one row per housing status record per enrollment, which
 #       means that this duplicates on enrollments
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_all_housing <- function(
   epicc_paths,
   analytic_fields
@@ -463,10 +463,10 @@ load_epicc_all_housing <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_case_notes ----
 #   - more than one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_case_notes <- function(
     epicc_paths,
     analytic_fields
@@ -477,10 +477,10 @@ load_epicc_case_notes <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Ingest epicc_support_services_tracker ----
 #   - more than one row per client
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 load_epicc_support_services_tracker <- function(
     epicc_paths,
     analytic_fields
@@ -491,7 +491,7 @@ load_epicc_support_services_tracker <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 3. Transformation Layer Overview ----
 #
 # The transformation layer converts raw EPICC extracts (loaded via
@@ -523,16 +523,16 @@ load_epicc_support_services_tracker <- function(
 #
 # All intermediate objects are returned as list elements so Data Team staff can
 # inspect them interactively during development.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform epicc_pathclient ----
 #   - PathClient is the authoritative event timeline (enrollment, dismissal,
 #       pathway events)
 #   - Pivot to one row per enrollment
 #   - Drop Pathway metadata columns
 #   - Keep analytic fields (enrollment dates, dismissal, agency, etc.)
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_epicc_pathclient <- function(
   epicc
 ) {
@@ -696,13 +696,13 @@ transform_epicc_pathclient <- function(
   )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # Transform referral flow ----
 #   - Joins REF, IC, TWOW, THIRTYD, THREEM, SIXM, REENGAGE
 #   - Prefixes all columns except tiedenrollment
 #   - Joins SCD summation tables (intake, payor, housing) to ALL parent forms
 #   - Collapses SCD summation tables to one active row per enrollment
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 transform_epicc_referral_flow <- function(
   epicc
 ) {
@@ -787,6 +787,9 @@ transform_epicc_referral_flow <- function(
     ) |>
     dplyr::select(
       -client_number
+    ) |> 
+    dplyr::select(
+      -tiedenrollment
     )
 
   # Drop docserno from parent event forms to avoid suffix collisions (.x/.y) due
@@ -1081,12 +1084,12 @@ transform_epicc_referral_flow <- function(
 
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 4. Extract final epicc_full_data ----
 #   - Returns the final wide referral_flow table
 #   - Maintained as a semantic wrapper to expose the final wide table as
 #     epicc_full_data
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 extract_epicc_full_data <- function(
   referral_flow
@@ -1094,7 +1097,7 @@ extract_epicc_full_data <- function(
   referral_flow$joined_referral_flow
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 5. EPICC ETL entry point ----
 #   - Loads analytic_fields metadata
 #   - Ingests all EPICC extracts using metadata-driven loaders
@@ -1102,7 +1105,7 @@ extract_epicc_full_data <- function(
 #   - Returns a named list of all EPICC data objects
 #   - Does not write to disk or modify global env objects as the old ETL code
 #       did.
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 run_epicc_etl <- function(
   analytic_fields,
   epicc_provider_placement,
@@ -1148,9 +1151,9 @@ run_epicc_etl <- function(
   #   )
   # )
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 1. Raw Ingestion
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   epicc_raw <- list(
     epicc_client = load_epicc_client(
       epicc_paths,
@@ -1230,9 +1233,9 @@ run_epicc_etl <- function(
     )
   )
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 2. Transformations
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   pathclient <- transform_epicc_pathclient(
     epicc_raw
   )
@@ -1264,9 +1267,9 @@ run_epicc_etl <- function(
     )
   }
 
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   # 3. Return structured object
-  # =-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
   list(
     raw = epicc_raw,
     transform  = list(
