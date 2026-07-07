@@ -1,4 +1,4 @@
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # CARTOGRAPHY MODULE (BUILDER FUNCTIONS ONLY) ----
 # Purpose:
 #   - Provide reusable cartography builder functions for reporting and ETL
@@ -10,28 +10,28 @@
 #   - Build county shapefiles (2-county and 7-county subsets)
 #   - Build ZCTA shapefiles
 #   - Build ZIP → County → ZCTA crosswalk with Promise Zone and North flags
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 1. lintr options ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # Disable lintr warnings for object usage in this module, as objects are built
 # and used within the same function scope.
 
 # nolint start: object_usage_linter
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 2. Paths ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # Shared LUT directory on the enterprise server. Access to this path assumes
 # that the P: drive is mounted (typically via VPN when remote).
 lut_dir <- "P:/DATA/LUTs"
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 3. Core ETL builders ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # Hard-coded Promise Zone ZIP Codes (stable, federally defined)
 build_promise_zone_zips <- function() {
@@ -303,9 +303,9 @@ build_zcta_fips <- function(
     )
 }
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # 4. High-level cartography builder (optional convenience) ----
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 
 # This function does NOT cache or write to disk. It simply orchestrates the
 # builders and returns a named list. {targets} will decide when/how to run it.
@@ -345,6 +345,6 @@ build_cartography_bundle <- function() {
 # End disabling of lintr warnings for object usage in this module.
 # nolint end
 
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
 # END OF CARTOGRAPHY MODULE
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# ===
