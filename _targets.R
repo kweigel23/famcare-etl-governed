@@ -924,6 +924,15 @@ tar_target(
   },
   format = "file"
  ),
+
+ tar_target(
+   yere_client_family_needs_file,
+   {
+     vpn_check
+     yere_paths$yere_client_family_needs
+   },
+   format = "file"
+ ),
  
  # ===
  # Adds raw-read targets that depend on file targets ----
@@ -1594,6 +1603,14 @@ tar_target(
    analytic_fields = analytic_fields
   )
  ),
+
+tar_target(
+  yere_client_family_needs_raw,
+  load_famcare_extract(
+    path = yere_client_family_needs_file,
+    analytic_fields = analytic_fields
+  )
+),
  
  # ===
  # Program ETL branches (each returns a structured list) ----
@@ -1722,7 +1739,8 @@ tar_target(
     yere_active_housing = yere_active_housing_raw,
     yere_all_housing = yere_all_housing_raw,
     yere_client_needs = yere_client_needs_raw,
-    yere_caregiver_needs = yere_caregiver_needs_raw
+    yere_caregiver_needs = yere_caregiver_needs_raw,
+    yere_client_family_needs = yere_client_family_needs_raw
     )
   ),
  

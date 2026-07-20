@@ -666,7 +666,8 @@ transform_bcr_referral_flow <- function(
       parent_docserno = payor_parent_docserno
     ) |>
     dplyr::select(
-      -client_number
+      -client_number,
+      -tiedenrollment
     )
   
   housing <- clean_form(
@@ -1070,3 +1071,4 @@ run_bcr_etl <- function(
     subsets = subsets
   )
 }
+
