@@ -649,8 +649,6 @@ transform_yere_pathclient <- function(
       client_number,
       client_last,
       client_first,
-      client_last,
-      client_first,
       dob,
       gender_description,
       race_description,
@@ -779,8 +777,8 @@ transform_yere_referral_flow <- function(
     ) |>
     dplyr::select(
       -client_number,
-      -client_last,
-      -client_first
+      -caregiver_needs_client_last,
+      -caregiver_needs_client_first
     )
     client_family_needs <- clean_form(
       yere$yere_client_family_needs,
