@@ -200,6 +200,10 @@ yere_paths <- list(
  yere_caregiver_needs = make_path(
   "FAMCare YERE Extract/",
   "Q_YERE_CAREGIVER_NEEDS.csv"
+ ),
+ yere_client_family_needs = make_path(
+   "FAMCare YERE Extract/",
+   "Q_YERE_CLIENT_FAMILY_NEEDS.csv"
  )
 )
 
@@ -427,6 +431,7 @@ load_yere_all_housing <- function(
 # ===
 # Ingest yere_client_needs ----
 #   - more than one row per client
+#   - one row per enrollment
 # ===
 load_yere_client_needs <- function(
     yere_paths,
@@ -441,6 +446,7 @@ load_yere_client_needs <- function(
 # ===
 # Ingest yere_caregiver_needs ----
 #   - more than one row per client
+#   - one row per enrollment
 # ===
 load_yere_caregiver_needs <- function(
     yere_paths,
@@ -448,6 +454,21 @@ load_yere_caregiver_needs <- function(
 ) {
   load_famcare_extract(
     path = yere_paths$yere_caregiver_needs,
+    analytic_fields = analytic_fields
+  )
+}
+
+# ===
+# Ingest yere_client_family_needs ----
+#   - more than one row per client
+#   - one row per enrollment
+# ===
+load_yere_client_family_needs <- function(
+    yere_paths,
+    analytic_fields
+) {
+  load_famcare_extract(
+    path = yere_paths$yere_client_family_needs,
     analytic_fields = analytic_fields
   )
 }
@@ -757,6 +778,18 @@ transform_yere_referral_flow <- function(
       parent_docserno = caregiver_needs_parent_docserno
     ) |>
     dplyr::select(
+      -client_number,
+      -client_last,
+      -client_first
+    )
+    client_family_needs <- clean_form(
+      yere$yere_client_family_needs,
+      "client_family_needs_"
+    ) |>
+    dplyr::rename(
+      parent_docserno = client_family_needs_parent_docserno
+    ) |>
+    dplyr::select(
       -client_number
     )
   
@@ -922,6 +955,12 @@ transform_yere_referral_flow <- function(
     caregiver_needs
   )
   
+  # Diagnostic: caregiver_needs_one shows which caregiver needs SCD row was selected for
+  # each enrollment. Useful for debugging missing or stale SCD values.
+  client_family_needs_one  <- collapse_scd(
+    client_family_needs
+  )
+  
   # Start join sequence with joined "authoritative" pathclient
   joined <- pc |>
     # Join SCD "active" summaries once per enrollment
@@ -953,6 +992,13 @@ transform_yere_referral_flow <- function(
         "tiedenrollment"
       )
     ) |>
+    dplyr::left_join(
+      client_family_needs_one,
+      by = c(
+        "client_number",
+        "tiedenrollment"
+      )
+    ) |> 
     
     # Join event forms by enrollment
     dplyr::left_join(
@@ -1011,7 +1057,8 @@ transform_yere_referral_flow <- function(
       payor_one   = payor_one,
       housing_one = housing_one,
       client_needs_one = client_needs_one,
-      caregiver_needs_one = caregiver_needs_one
+      caregiver_needs_one = caregiver_needs_one,
+      client_family_needs_one = client_family_needs_one
     ),
     parent_map = parent_map,
     transformed = list(
@@ -1074,6 +1121,7 @@ run_yere_etl <- function(
     yere_all_housing,
     yere_client_needs,
     yere_caregiver_needs,
+    yere_client_family_needs,
     start_date = NULL,
     end_date = NULL,
     fiscal_system = c(
@@ -1155,6 +1203,10 @@ run_yere_etl <- function(
       analytic_fields
     ),
     yere_caregiver_needs = load_yere_caregiver_needs(
+      yere_paths,
+      analytic_fields
+    ),
+    yere_client_family_needs = load_yere_client_family_needs(
       yere_paths,
       analytic_fields
     )
