@@ -206,6 +206,10 @@ complex_care_paths <- list(
   complex_care_ext_atd_watchlist_uploads = make_latest_file_path(
     "EXT ATD Watchlist Uploads",
     pattern = "ext_atd_watchlist_\\d{8}\\.csv$"
+  ),
+  complex_care_ext_pfp_service_history = make_all_file_paths(
+    "EXT PFP Service History Report",
+    pattern = "ext_pfp_service_history_report_\\d{8}\\.(csv|xlsx|xls)$"
   )
 )
 
@@ -418,15 +422,32 @@ load_complex_care_all_housing <- function(
 # ===
 # Ingest complex_care_ext_mercy_utilization ----
 #   - multiple rows per mrn
+#   - Unlike other loaders, this one extracts the date from the file name
 # ===
 load_complex_care_ext_mercy_utilization <- function(
     complex_care_paths,
     analytic_fields
 ) {
-  load_famcare_extract(
+  
+  df <- load_famcare_extract(
     path = complex_care_paths$complex_care_ext_mercy_utilization,
     analytic_fields = analytic_fields
   )
+  
+  # Extract YYYYMMDD from filename
+  date_created <- ymd(
+    stringr::str_extract(
+      complex_care_paths$complex_care_ext_mercy_utilization,
+      "\\d{8}"
+    )
+  )
+  
+  df <- df |>
+    mutate(
+      date_created = date_created
+      )
+  
+  df
 }
 
 # ===
@@ -456,6 +477,20 @@ load_complex_care_ext_atd_watchlist <- function(
 ) {
   load_famcare_extract(
     path = complex_care_paths$complex_care_ext_atd_watchlist,
+    analytic_fields = analytic_fields
+  )
+}
+
+# ===
+  # Ingest pfp_service_history_report ----
+#   - multiple rows per mrn
+# ===
+load_complex_care_ext_pfp_service_history <- function(
+    complex_care_paths,
+    analytic_fields
+) {
+  load_famcare_extract(
+    path = complex_care_paths$complex_care_ext_pfp_service_history,
     analytic_fields = analytic_fields
   )
 }
@@ -1007,7 +1042,8 @@ transform_complex_care_referral_flow <- function(
     
     ext_mercy_utilization = complex_care$complex_care_ext_mercy_utilization,
     ext_atd_notifications = complex_care$complex_care_ext_atd_notifications,
-    ext_atd_watchlist = complex_care$complex_care_ext_atd_watchlist
+    ext_atd_watchlist = complex_care$complex_care_ext_atd_watchlist,
+    ext_pfp_service_history = complex_care$complex_care_ext_pfp_service_history
   )
 
   # Return the joined_referral_flow and scd
@@ -1058,6 +1094,7 @@ run_complex_care_etl <- function(
   complex_care_ext_mercy_utilization,
   complex_care_ext_atd_notifications,
   complex_care_ext_atd_watchlist,
+  complex_care_ext_pfp_service_history,
   start_date = NULL,
   end_date = NULL,
   fiscal_system = c(
@@ -1102,7 +1139,8 @@ run_complex_care_etl <- function(
     complex_care_all_housing = complex_care_all_housing,
     complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization,
     complex_care_ext_atd_notifications = complex_care_ext_atd_notifications,
-    complex_care_ext_atd_watchlist = complex_care_ext_atd_watchlist
+    complex_care_ext_atd_watchlist = complex_care_ext_atd_watchlist,
+    complex_care_ext_pfp_service_history = complex_care_ext_pfp_service_history
   )
 
   # ===
