@@ -460,6 +460,15 @@ tar_target(
   format = "file"
 ),
 
+tar_target(
+  complex_care_ext_pfp_service_history_file,
+  {
+    vpn_check
+    complex_care_paths$complex_care_ext_pfp_service_history
+  },
+  format = "file"
+),
+
  ## EPICC ----
  
  tar_target(
@@ -1166,10 +1175,12 @@ tar_target(
   )
  ),
 
- tar_target(
+# supplies the entire complex_care_paths because path isn't an argument in
+# load_complex_care_ext_mercy_utilization.
+tar_target(
   complex_care_ext_mercy_utilization_raw,
-  load_famcare_extract(
-    path = complex_care_ext_mercy_utilization_file,
+  load_complex_care_ext_mercy_utilization(
+    complex_care_paths = complex_care_paths,
     analytic_fields = analytic_fields
   )
 ),
@@ -1186,6 +1197,14 @@ tar_target(
   complex_care_ext_atd_watchlist_raw,
   load_famcare_extract(
     path = complex_care_ext_atd_watchlist_file,
+    analytic_fields = analytic_fields
+  )
+),
+
+tar_target(
+  complex_care_ext_pfp_service_history_raw,
+  load_famcare_extract(
+    path = complex_care_ext_pfp_service_history_file,
     analytic_fields = analytic_fields
   )
 ),
@@ -1661,7 +1680,8 @@ tar_target(
     complex_care_all_housing = complex_care_all_housing_raw,
     complex_care_ext_mercy_utilization = complex_care_ext_mercy_utilization_raw,
     complex_care_ext_atd_notifications = complex_care_ext_atd_notifications_raw,
-    complex_care_ext_atd_watchlist = complex_care_ext_atd_watchlist_raw
+    complex_care_ext_atd_watchlist = complex_care_ext_atd_watchlist_raw,
+    complex_care_ext_pfp_service_history = complex_care_ext_pfp_service_history_raw
   )
  ),
  
