@@ -1209,6 +1209,14 @@ tar_target(
   )
 ),
 
+# Target to build the alert watchlist
+tar_target(
+  complex_care_alert_watchlist_raw,
+  transform_complex_care_alert_watchlist(
+    complex_care_etl$complex_care_full_data
+    )
+),
+
  ## EPICC ----
  
  tar_target(
@@ -1878,7 +1886,63 @@ tar_target(
    yere_raw = yere_etl$raw
   )
  ),
- 
+
+# ===
+# File Write Outputs (csv|xlsx) ----
+# ===
+
+# Write the PCC alerting watchlist to enterprise server
+tar_target(
+  complex_care_alert_watchlist_server_csv,
+  {
+    out_path <- paste0(
+      "P:/DATA/Data Files/Collective Medical Uploads/BHN_CM_Watchlist_",
+      format(
+        Sys.Date(),
+        "%Y%m%d"
+        ),
+      ".csv"
+    )
+    
+    readr::write_csv(
+      complex_care_alert_watchlist_raw,
+      file = out_path,
+      na = ""
+    )
+    
+    out_path
+  },
+  format = "file"
+),
+
+# Write the PCC alerting watchlist to Complex Care SharePoint folder
+tar_target(
+  complex_care_alert_watchlist_sharepoint_csv,
+  {
+    out_path <- paste0(
+      "C:/Users/",
+      Sys.info()[7],
+      "/Behavioral Health Network of Greater St. Louis/",
+      "BHN - Documents/Complex Care/Data & Evaluation/HIDI Analysis/",
+      "BHN_CM_Watchlist_",
+      format(
+        Sys.Date(),
+        "%Y%m%d"
+        ),
+      ".csv"
+    )
+    
+    readr::write_csv(
+      complex_care_alert_watchlist_raw,
+      file = out_path,
+      na = ""
+    )
+    
+    out_path
+  },
+  format = "file"
+),
+
 # ===
 # Cached outputs (RDS) ----
 # ===
