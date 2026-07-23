@@ -469,7 +469,7 @@ load_complex_care_ext_atd_notifications <- function(
 
 # ===
 # Ingest complex_care_ext_atd_watchlist ----
-#   - one rows per mrn
+#   - one row per mrn
 # ===
 load_complex_care_ext_atd_watchlist <- function(
     complex_care_paths,
@@ -532,8 +532,8 @@ load_complex_care_ext_pfp_service_history <- function(
 # ===
 
 # ===
-# Transform complex_care_pathclient ----
-#   - PathClient is the authoritative event timeline (enrollment, dismissal,
+## 3a. Transform Complex Care Pathclient ----
+#   - Pathclient is the authoritative event timeline (enrollment, dismissal,
 #       pathway events)
 #   - Pivot to one row per enrollment
 #   - Drop Pathway metadata columns
@@ -602,6 +602,8 @@ transform_complex_care_pathclient <- function(
       dplyr::select(
         complex_care$complex_care_client,
         client_number,
+        mi,
+        suffix,
         birth_date,
         gender_description,
         race_description,
@@ -617,12 +619,16 @@ transform_complex_care_pathclient <- function(
         city,
         state,
         zip_code,
+        primary_phone,
+        cell_phone,
         county_description
       ),
       by = "client_number"
     ) |>
     dplyr::rename(
-      dob = birth_date
+      dob = birth_date,
+      client_middle = mi,
+      client_suffix = suffix
     )
 
   # Pivot only the pwy_forms_docserno column to produce one column per
@@ -665,10 +671,10 @@ transform_complex_care_pathclient <- function(
   wide <- wide |>
     dplyr::relocate(
       client_number,
-      client_last,
       client_first,
+      client_middle,
       client_last,
-      client_first,
+      client_suffix,
       dob,
       gender_description,
       race_description,
@@ -684,6 +690,8 @@ transform_complex_care_pathclient <- function(
       city,
       state,
       zip_code,
+      primary_phone,
+      cell_phone,
       county_description,
       .before = everything()
     )
@@ -696,7 +704,7 @@ transform_complex_care_pathclient <- function(
 }
 
 # ===
-# Transform referral flow ----
+## 3b. Transform referral flow ----
 #   - Joins REF, IC, RP
 #   - Prefixes all columns except tiedenrollment
 #   - Joins SCD summation tables (presconcerns, payor, housing) to ALL parent
@@ -779,17 +787,6 @@ transform_complex_care_referral_flow <- function(
     dplyr::select(
       -client_number
     )
-
-  # ccnotes <- clean_form(
-  #   complex_care$complex_care_clinical_notes,
-  #   "ccnotes_"
-  # ) |>
-  #   dplyr::rename(
-  #     parent_docserno = ccnotes_parent_docserno
-  #   ) |>
-  #   dplyr::select(
-  #     -client_number
-  #   )
 
   qol <- clean_form(
     complex_care$complex_care_quality_of_life,
@@ -965,15 +962,6 @@ transform_complex_care_referral_flow <- function(
       )
     ) |>
 
-    # # Join SCD "committee notes" once per enrollment
-    # dplyr::left_join(
-    #   ccnotes_one,
-    #   by = c(
-    #     "client_number",
-    #     "tiedenrollment"
-    #   )
-    # ) |>
-
     # Join SCD "shelter bed" once per enrollment
     dplyr::left_join(
       shelter_beds_one,
@@ -1054,7 +1042,165 @@ transform_complex_care_referral_flow <- function(
 }
 
 # ===
-# 4. Extract final complex_care_full_data ----
+## 3c. Transform alert watchlist ----
+#   - builds a tibble but does not perform file writes, are handled by
+#       {targets}
+# ===
+
+transform_complex_care_alert_watchlist <- function(
+    complex_care_full_data
+    ) {
+  
+  complex_care_full_data |>
+    filter(
+      !is.na(
+        roster_added_cohort_date
+        ),
+      is.na(
+        enrollment_ending_date
+        )
+    ) |>
+    select(
+      client_number,
+      client_first,
+      client_middle,
+      client_last,
+      client_suffix,
+      dob,
+      gender_description,
+      ssn,
+      ssn_last_four,
+      street,
+      street2,
+      city,
+      zip_code,
+      mrn_mercy,
+      primary_phone,
+      cell_phone,
+      eto_case_num
+    ) |>
+    mutate(
+      state = "",
+      cohort = "Clinical BEACN",
+      agency = "Places for People",
+      phone = case_when(
+        !is.na(
+          cell_phone
+          ) ~ cell_phone,
+        !is.na(
+          primary_phone
+          ) ~ primary_phone,
+        .default = NA_character_
+      )
+    ) |>
+    select(
+      -primary_phone,
+      -cell_phone
+      ) |>
+    relocate(
+      phone,
+      .before = cohort
+      ) |>
+    mutate(
+      Group1 = "",
+      Group2 = "",
+      Group3 = "",
+      Group4 = "",
+      Group5 = ""
+    ) |>
+    mutate(
+      addr_1 = case_when(
+        str_detect(
+          street,
+          regex(
+            "HOMELESS|Homeless|WITHOUT HOME|UNKNOWN",
+            ignore_case = TRUE
+            )
+          ) ~ "",
+        .default = street
+      )
+    ) |>
+    mutate(
+      cm_id = if_else(
+        !is.na(
+          eto_case_num
+          ),
+        as.character(
+          eto_case_num
+          ),
+        as.character(
+          client_number
+          )
+      )
+    ) |>
+    mutate(
+      addr_1 = toupper(
+        addr_1
+        )
+      ) |>
+    separate(
+      addr_1,
+      into = c(
+        "addr_3",
+        "unit"
+        ),
+      sep = "(?=STE)|(?=SUITE)|(?=APARTMENT)|(?=APT)|(?=UNIT)|(?=LOT)|(?=FL\\s)|(?=#)",
+      extra = "drop",
+      fill = "right"
+    ) |>
+    mutate(
+      addr_2 = if_else(
+        is.na(
+          street2
+          ),
+        unit,
+        street2
+        ),
+      addr_3 = addr_3 |>
+        str_remove(
+          "SOBER LIVING HOUSE"
+          ) |>
+        str_remove(
+          ","
+          ) |>
+        str_remove(
+          "\\."
+          ) |>
+        str_remove(
+          "-"
+          )
+    ) |>
+    select(
+      -street,
+      -street2
+    ) |> 
+    rename(
+      `Unique ID Number` = cm_id,
+      MRN = mrn_mercy,
+      `First Name` = client_first,
+      `Middle Name` = client_middle,
+      `Last Name` = client_last,
+      `Name Suffix` = client_suffix,
+      `Date of Birth` = dob,
+      Gender = gender_description,
+      SSN = ssn,
+      `Last Four SSN` = ssn_last_four,
+      `Address 1` = addr_3,
+      `Address 2` = addr_2,
+      City = city,
+      State = state,
+      `ZIP Code` = zip_code,
+      `Phone Number` = phone,
+      Cohort = cohort,
+      Agency = agency
+    ) |>
+    select(
+      -unit
+      )
+}
+
+# ===
+# 4. Extract final Complex Care Full Data ----
 #   - Returns the final wide referral_flow table
 #   - Maintained as a semantic wrapper to expose the final wide table as
 #     complex_care_full_data
